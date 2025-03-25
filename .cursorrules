@@ -1,0 +1,47 @@
+{
+    "version": "1.0.0",
+    "projectType": "educational",
+    "subject": "mathematics",
+    "targetAudience": "elementary school students in Korea",
+    "framework": "p5.js",
+    "lintRules": {
+        "indentation": 2,
+        "maxLineLength": 100,
+        "preferConstOverLet": true,
+        "semicolons": true,
+        "trailingCommas": true
+    },
+    "educationalStandards": {
+        "alignWithKoreanCurriculum": true,
+        "gradeLevels": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+        ],
+        "mathDomains": [
+            "numbers",
+            "operations",
+            "geometry",
+            "measurement",
+            "data analysis",
+            "patterns"
+        ]
+    },
+    "accessibility": {
+        "multiLanguageSupport": true,
+        "colorBlindFriendly": true,
+        "keyboardNavigation": true,
+        "screenReaderCompatible": true
+    },
+    "performance": {
+        "targetFrameRate": 60,
+        "memoryEfficient": true,
+        "mobileOptimized": true
+    },
+    "continualImprovement": true,
+    "requireDocumentation": true,
+    "testingRequired": true
+}

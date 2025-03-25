@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>수학 시각화</title>
+
+  <!-- 스타일시트 -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>수학 시각화 도구</h1>
+      <p>다양한 수학적 개념을 시각적으로 탐색하세요</p>
+    </header>
+
+    <nav>
+      <div class="controls">
+        <!-- 버튼이 코드에서 동적으로 생성됩니다 -->
+      </div>
+    </nav>
+
+    <main>
+      <div id="canvas-container"></div>
+      <div class="canvas-controls">
+        <button class="canvas-control-button" id="zoom-in">+</button>
+        <button class="canvas-control-button" id="zoom-out">-</button>
+      </div>
+
+      <div class="instructions">
+        <h3>조작 방법</h3>
+        <ul>
+          <li>버튼을 클릭하여 다른 시각화로 전환</li>
+          <li>마우스 드래그로 3D 객체 회전</li>
+          <li>스크롤바로 캔버스 이동</li>
+          <li>우측 하단의 +/- 버튼으로 확대/축소</li>
+          <li>특정 시각화에 따라 추가 조작법이 화면에 표시됩니다</li>
+        </ul>
+      </div>
+    </main>
+
+    <footer>
+      <p>© 2023 수학 시각화 프로젝트</p>
+    </footer>
+  </div>
+
+  <!-- p5.js 라이브러리 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+
+  <!-- 코어 시각화 클래스 -->
+  <script src="js/core/Visualization.js"></script>
+
+  <!-- 시각화 모듈들 -->
+  <script src="js/visualizations/RotatingSphere.js"></script>
+  <script src="js/visualizations/RotatingTetrahedron.js"></script>
+  <script src="js/visualizations/RotatingTorus.js"></script>
+  <script src="js/visualizations/RegularPolygons.js"></script>
+  <script src="js/visualizations/NumberLineViz.js"></script>
+  <script src="js/visualizations/VectorField.js"></script>
+  <script src="js/visualizations/TrigonometryCircle.js"></script>
+  <script src="js/visualizations/ComplexPlane.js"></script>
+  <script src="js/visualizations/FractalExplorer.js"></script>
+  <script src="js/visualizations/ProbabilityDistribution.js"></script>
+  <script src="js/visualizations/EuclideanGeometry.js"></script>
+  <script src="js/visualizations/NumberTheory.js"></script>
+
+  <!-- 메인 스케치 -->
+  <script src="js/sketch.js"></script>
+</body>
+
+</html>
