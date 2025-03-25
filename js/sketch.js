@@ -1,4 +1,4 @@
-// sketch.js : 시각화 관리자 클래스와 기본 함수들을 정의하는 파일
+// sketch.js : 시각화 관리자와 기본 함수들
 
 // 모든 시각화 클래스 목록
 const visualizationClasses = [
@@ -18,6 +18,24 @@ const visualizationClasses = [
   FunctionGrapher
 ];
 
+// 시각화 이름 목록
+const visualizationNames = [
+  "회전하는 구",
+  "회전하는 사면체", 
+  "회전하는 도넛",
+  "정다각형",
+  "수직선",
+  "벡터장",
+  "삼각함수 원",
+  "복소평면",
+  "프랙탈 탐색기",
+  "확률 분포",
+  "유클리드 기하학",
+  "정수론",
+  "좌표계",
+  "함수 그래퍼"
+];
+
 // 3D 시각화 클래스 목록 (WebGL 필요)
 const webglVisualizations = [RotatingSphere, RotatingTetrahedron, RotatingTorus];
 
@@ -25,21 +43,9 @@ const webglVisualizations = [RotatingSphere, RotatingTetrahedron, RotatingTorus]
 let currentVizIndex = 0;
 let currentViz = null;
 let isWebGLActive = false;
+let dropdown;
 
-// 버튼 활성화 상태 업데이트
-function updateButtonStates() {
-  const buttons = document.querySelectorAll('.viz-button');
-  buttons.forEach((button) => {
-    const index = parseInt(button.getAttribute('data-index'));
-    if (index === currentVizIndex) {
-      button.classList.add('active');
-    } else {
-      button.classList.remove('active');
-    }
-  });
-}
-
-// 특정 시각화로 이동하는 함수
+// 시각화 전환 함수
 function switchVisualization(index) {
   // 현재 시각화 비활성화
   if (currentViz) {
@@ -49,129 +55,94 @@ function switchVisualization(index) {
   // 인덱스 설정
   currentVizIndex = index;
   
-  // 새 시각화 생성 및 초기화
-  setupVisualization();
+  // WebGL 모드 확인
+  const needsWebGL = webglVisualizations.includes(visualizationClasses[currentVizIndex]);
   
-  // 버튼 상태 업데이트
-  updateButtonStates();
-}
-
-// 시각화 설정 함수
-function setupVisualization() {
-  console.log(`Setting up visualization: ${currentVizIndex}`);
-  const VizClass = visualizationClasses[currentVizIndex];
-  
-  try {
-    // 새 시각화 인스턴스 생성
-    currentViz = new VizClass();
-    console.log(`Created instance of ${VizClass.name}`);
+  // 모드가 변경되어야 하면 캔버스 다시 만들기
+  if (needsWebGL !== isWebGLActive) {
+    // 기존 캔버스 제거
+    removeElements(); // p5.js 함수로 모든 p5 요소 제거
     
-    // WebGL 모드 확인 및 전환
-    const needsWebGL = webglVisualizations.includes(VizClass);
-    console.log(`Needs WebGL: ${needsWebGL}, Current WebGL state: ${isWebGLActive}`);
-    
-    if (needsWebGL !== isWebGLActive) {
-      console.log(`Toggling WebGL mode from ${isWebGLActive} to ${needsWebGL}`);
-      // 캔버스 요소 제거
-      const container = document.getElementById('canvas-container');
-      if (container) {
-        console.log(`Removing canvas children: ${container.childNodes.length}`);
-        while (container.firstChild) {
-          container.removeChild(container.firstChild);
-        }
-      }
-      
-      // 새 캔버스 생성
-      let canvas;
-      if (needsWebGL) {
-        console.log('Creating WebGL canvas');
-        canvas = createCanvas(windowWidth, windowHeight, WEBGL);
-      } else {
-        console.log('Creating 2D canvas');
-        canvas = createCanvas(windowWidth, windowHeight);
-      }
-      
-      console.log('Appending canvas to container');
-      canvas.parent('canvas-container');
-      isWebGLActive = needsWebGL;
+    // 새 캔버스 생성
+    if (needsWebGL) {
+      createCanvas(windowWidth, windowHeight, WEBGL);
+    } else {
+      createCanvas(windowWidth, windowHeight);
     }
     
-    // 시각화 설정 및 초기화
-    console.log('Setting up visualization');
-    currentViz.setup();
+    isWebGLActive = needsWebGL;
     
-    // 창 크기에 맞게 조정
-    console.log(`Updating size: ${width} x ${height}`);
-    currentViz.updateSize(width, height);
-    
-    console.log('Visualization setup complete');
-  } catch (error) {
-    console.error(`Failed to initialize ${VizClass ? VizClass.name : 'unknown visualization'}:`, error);
-    console.error('Stack trace:', error.stack);
+    // 드롭다운 다시 만들기
+    setupDropdown();
   }
-}
-
-// 버튼 이벤트 리스너 설정
-function setupButtonListeners() {
-  const buttons = document.querySelectorAll('.viz-button');
-  buttons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const index = parseInt(button.getAttribute('data-index'));
-      console.log(`Button clicked: index ${index}`);
-      switchVisualization(index);
-    });
-  });
+  
+  // 새 시각화 인스턴스 생성
+  currentViz = new visualizationClasses[currentVizIndex]();
+  
+  // 시각화 설정 및 초기화
+  currentViz.setup();
+  
+  // 크기 설정
+  currentViz.updateSize(width, height);
+  
+  // 드롭다운 값 업데이트
+  dropdown.selected(currentVizIndex.toString());
 }
 
 // p5.js 기본 함수들
 function setup() {
-  console.log('Setup called');
-  
-  // 버튼 이벤트 리스너 설정
-  setupButtonListeners();
-  
   // 최초 캔버스 생성 (WEBGL 모드로 시작)
-  console.log('Creating initial canvas');
   createCanvas(windowWidth, windowHeight, WEBGL);
   isWebGLActive = true;
   
+  // 드롭다운 설정
+  setupDropdown();
+  
   // 첫 번째 시각화 설정
-  console.log('Setting up initial visualization');
-  setupVisualization();
+  switchVisualization(0);
+}
+
+// 드롭다운 초기화 (p5.js 방식)
+function setupDropdown() {
+  // 드롭다운 생성
+  dropdown = createSelect();
+  dropdown.position(10, 10);
+  dropdown.id('viz-dropdown');
   
-  // 초기 버튼 상태 설정
-  updateButtonStates();
+  // 옵션 추가
+  for (let i = 0; i < visualizationNames.length; i++) {
+    dropdown.option(visualizationNames[i], i);
+  }
   
-  console.log('Setup complete');
+  // 이벤트 리스너 설정
+  dropdown.changed(onDropdownChange);
+  
+  // 현재 선택 항목 설정
+  dropdown.selected(currentVizIndex.toString());
+}
+
+// 드롭다운 변경 이벤트 핸들러
+function onDropdownChange() {
+  const index = parseInt(dropdown.value());
+  switchVisualization(index);
 }
 
 function draw() {
-  if (!currentViz) {
-    console.log('No current visualization');
-    return;
+  if (!currentViz) return;
+  
+  // 2D 모드에서는 좌표계 조정
+  if (!isWebGLActive) {
+    resetMatrix();
+    translate(-width/2, -height/2, 0);
   }
   
-  try {
-    const needsWebGL = webglVisualizations.includes(visualizationClasses[currentVizIndex]);
-    
-    // 2D 모드에서는 원점을 좌상단으로 이동
-    if (!needsWebGL) {
-      resetMatrix();
-      translate(-width/2, -height/2, 0);
-    }
-    
-    // 배경 및 시각화 그리기
-    background(255);
-    currentViz.update();
-    currentViz.draw();
-  } catch (error) {
-    console.error('Error in draw:', error);
-  }
+  // 시각화 업데이트 및 그리기
+  currentViz.update();
+  currentViz.draw();
 }
 
 function windowResized() {
   // 창 크기 변경 시 캔버스 크기 조정
-  console.log(`Window resized: ${windowWidth} x ${windowHeight}`);
   resizeCanvas(windowWidth, windowHeight);
   
   if (currentViz) {
@@ -205,17 +176,3 @@ function keyPressed() {
     switchVisualization((currentVizIndex + 1) % visualizationClasses.length);
   }
 }
-
-// p5.js가 로드되었는지 확인
-if (typeof p5 === 'undefined') {
-  console.error('p5.js is not loaded!');
-}
-
-// 시각화 클래스가 로드되었는지 확인
-visualizationClasses.forEach((VizClass, index) => {
-  if (!VizClass) {
-    console.error(`Visualization class at index ${index} is not loaded!`);
-  } else {
-    console.log(`Visualization loaded: ${VizClass.name}`);
-  }
-});

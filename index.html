@@ -7,80 +7,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>수학 시각화</title>
-  <style>
-    body,
-    html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
-
-    .buttons-container {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      z-index: 100;
-      display: flex;
-      flex-wrap: wrap;
-      max-width: 100%;
-      gap: 5px;
-    }
-
-    .viz-button {
-      padding: 8px 12px;
-      background-color: rgba(0, 0, 0, 0.5);
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      margin: 3px;
-      font-size: 14px;
-    }
-
-    .viz-button.active {
-      background-color: rgba(255, 0, 0, 0.7);
-    }
-
-    #canvas-container {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-    }
-  </style>
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 
 <body>
-  <!-- 시각화 버튼들 -->
-  <div class="buttons-container" id="viz-buttons">
-    <button class="viz-button" data-index="0">회전하는 구</button>
-    <button class="viz-button" data-index="1">회전하는 사면체</button>
-    <button class="viz-button" data-index="2">회전하는 도넛</button>
-    <button class="viz-button" data-index="3">정다각형</button>
-    <button class="viz-button" data-index="4">수직선</button>
-    <button class="viz-button" data-index="5">벡터장</button>
-    <button class="viz-button" data-index="6">삼각함수 원</button>
-    <button class="viz-button" data-index="7">복소평면</button>
-    <button class="viz-button" data-index="8">프랙탈 탐색기</button>
-    <button class="viz-button" data-index="9">확률 분포</button>
-    <button class="viz-button" data-index="10">유클리드 기하학</button>
-    <button class="viz-button" data-index="11">정수론</button>
-    <button class="viz-button" data-index="12">좌표계</button>
-    <button class="viz-button" data-index="13">함수 그래퍼</button>
-  </div>
-
-  <!-- 캔버스 컨테이너 -->
-  <div id="canvas-container"></div>
-
   <!-- p5.js 라이브러리 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
-
+  
   <!-- 코어 파일 -->
   <script src="js/core/Visualization.js"></script>
-
+  
   <!-- 시각화 모듈들 -->
   <script src="js/visualizations/RotatingSphere.js"></script>
   <script src="js/visualizations/RotatingTetrahedron.js"></script>
@@ -96,7 +32,7 @@
   <script src="js/visualizations/NumberTheory.js"></script>
   <script src="js/visualizations/CoordinateSystem.js"></script>
   <script src="js/visualizations/FunctionGrapher.js"></script>
-
+  
   <!-- 메인 스케치 -->
   <script src="js/sketch.js"></script>
 </body>
