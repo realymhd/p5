@@ -1,5 +1,3 @@
-// jsconfig.json : JavaScript 파일 설정 파일
-
 {
   "compilerOptions": {
     "target": "es6"
@@ -7,6 +5,6 @@
   "include": [
     "*.js",
     "**/*.js",
-    "libraries/*.js"
+    "/home/waynel/.cursor-server/extensions/samplavigne.p5-vscode-1.2.16/p5types/global.d.ts"
   ]
 }

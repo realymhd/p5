@@ -1,40 +1,138 @@
-<!-- index.html : 시각화 도구의 메인 페이지 -->
-
 <!DOCTYPE html>
-<html lang="ko">
+<html>
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>수학 시각화</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <title>초등 수학 기하학 갤러리</title>
+  <link rel="stylesheet" href="assets/css/style.css">
 </head>
 
 <body>
-  <!-- p5.js 라이브러리 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
-  
-  <!-- 코어 파일 -->
-  <script src="js/core/Visualization.js"></script>
-  
-  <!-- 시각화 모듈들 -->
-  <script src="js/visualizations/RotatingSphere.js"></script>
-  <script src="js/visualizations/RotatingTetrahedron.js"></script>
-  <script src="js/visualizations/RotatingTorus.js"></script>
-  <script src="js/visualizations/RegularPolygons.js"></script>
-  <script src="js/visualizations/NumberLineViz.js"></script>
-  <script src="js/visualizations/VectorField.js"></script>
-  <script src="js/visualizations/TrigonometryCircle.js"></script>
-  <script src="js/visualizations/ComplexPlane.js"></script>
-  <script src="js/visualizations/FractalExplorer.js"></script>
-  <script src="js/visualizations/ProbabilityDistribution.js"></script>
-  <script src="js/visualizations/EuclideanGeometry.js"></script>
-  <script src="js/visualizations/NumberTheory.js"></script>
-  <script src="js/visualizations/CoordinateSystem.js"></script>
-  <script src="js/visualizations/FunctionGrapher.js"></script>
-  
-  <!-- 메인 스케치 -->
-  <script src="js/sketch.js"></script>
+  <header>
+    <h1>초등 수학 기하학 갤러리</h1>
+    <p>초등학교 수학 교육을 위한 p5.js 기하학 자료 모음</p>
+  </header>
+
+  <main class="gallery">
+    <!-- Sketch 1: 기본 도형 그리기 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch1/index.html">
+        <img src="sketches/sketch1/screenshot.png" alt="기본 도형 그리기">
+        <h3>기본 도형 그리기</h3>
+      </a>
+    </div>
+
+    <!-- Sketch 2: 각도 측정기 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch2/index.html">
+        <img src="sketches/sketch2/screenshot.png" alt="각도 측정기">
+        <h3>각도 측정기</h3>
+      </a>
+    </div>
+
+    <!-- Sketch 3: 대칭 도형 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch3/index.html">
+        <img src="sketches/sketch3/screenshot.png" alt="대칭 도형">
+        <h3>대칭 도형</h3>
+      </a>
+    </div>
+
+    <!-- Sketch 4: 직각 삼각형 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch4/index.html">
+        <img src="sketches/sketch4/screenshot.png" alt="직각 삼각형">
+        <h3>직각 삼각형</h3>
+      </a>
+    </div>
+
+    <!-- Sketch 5: 원의 성질 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch5/index.html">
+        <img src="sketches/sketch5/screenshot.png" alt="원의 성질">
+        <h3>원의 성질</h3>
+      </a>
+    </div>
+
+    <!-- Sketch 6: 정다각형 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch6/index.html">
+        <img src="sketches/sketch6/screenshot.png" alt="정다각형">
+        <h3>정다각형</h3>
+      </a>
+    </div>
+
+    <!-- Sketch 7: 평행사변형 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch7/index.html">
+        <img src="sketches/sketch7/screenshot.png" alt="평행사변형">
+        <h3>평행사변형</h3>
+      </a>
+    </div>
+
+    <!-- Sketch 8: 사다리꼴 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch8/index.html">
+        <img src="sketches/sketch8/screenshot.png" alt="사다리꼴">
+        <h3>사다리꼴</h3>
+      </a>
+    </div>
+
+    <!-- Sketch 9: 입체도형 전개도 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch9/index.html">
+        <img src="sketches/sketch9/screenshot.png" alt="입체도형 전개도">
+        <h3>입체도형 전개도</h3>
+      </a>
+    </div>
+
+    <!-- Sketch 10: 정육면체 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch10/index.html">
+        <img src="sketches/sketch10/screenshot.png" alt="정육면체">
+        <h3>정육면체</h3>
+      </a>
+    </div>
+
+    <!-- Sketch 11: 직육면체 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch11/index.html">
+        <img src="sketches/sketch11/screenshot.png" alt="직육면체">
+        <h3>직육면체</h3>
+      </a>
+    </div>
+
+    <!-- Sketch 12: 원기둥 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch12/index.html">
+        <img src="sketches/sketch12/screenshot.png" alt="원기둥">
+        <h3>원기둥</h3>
+      </a>
+    </div>
+
+    <!-- Sketch 13: 원뿔 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch13/index.html">
+        <img src="sketches/sketch13/screenshot.png" alt="원뿔">
+        <h3>원뿔</h3>
+      </a>
+    </div>
+
+    <!-- Sketch 14: 구 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch14/index.html">
+        <img src="sketches/sketch14/screenshot.png" alt="구">
+        <h3>구</h3>
+      </a>
+    </div>
+
+    <!-- Sketch 15: 도형의 넓이 -->
+    <div class="sketch-card">
+      <a href="sketches/sketch15/index.html">
+        <img src="sketches/sketch15/screenshot.png" alt="도형의 넓이">
+        <h3>도형의 넓이</h3>
+      </a>
+    </div>
+  </main>
 </body>
 
 </html>

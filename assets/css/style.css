@@ -1,0 +1,67 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+}
+
+header {
+    text-align: center;
+    padding: 2rem;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+header h1 {
+    margin: 0;
+    color: #333;
+}
+
+header p {
+    margin: 0.5rem 0;
+    color: #666;
+}
+
+.gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.sketch-card {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+    background: #fff;
+}
+
+.sketch-card:hover {
+    transform: translateY(-5px);
+}
+
+.sketch-card img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.sketch-card h3 {
+    padding: 1rem;
+    margin: 0;
+    text-align: center;
+    color: #333;
+}
+
+.sketch-card a {
+    text-decoration: none;
+    color: inherit;
+}
+
+canvas {
+    display: block;
+    margin: 0 auto;
+} 
