@@ -99,19 +99,6 @@ function draw() {
   pop();
 }
 
-function mousePressed() {
-  // Back to Gallery 버튼 클릭 체크
-  if (mouseX >= 10 && mouseX <= 10 + 150 && 
-      mouseY >= 10 && mouseY <= 10 + 30) {
-    window.location.href = '../../index.html';
-    return false;
-  }
-  
-  // 다른 영역 클릭 시 마우스 인터랙션 전환
-  mouseInteraction = !mouseInteraction;
-  return false;
-}
-
 function mouseReleased() {
   // No action needed
 }

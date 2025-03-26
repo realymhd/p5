@@ -1,5 +1,4 @@
 // Sketch variables
-let navigation;
 let cubeSize = 150;         // 정육면체 크기
 let rotationX = Math.PI / 5;
 let rotationY = Math.PI / 4;
@@ -8,7 +7,6 @@ let showFolded = true;      // 접힌 정육면체 표시
 let showUnfolded = false;   // 펼쳐진 정육면체(전개도) 표시
 let showLabels = true;      // 면 레이블 표시
 let showDimensions = true;  // 치수 표시
-let sliderSize;             // 크기 조절 슬라이더
 
 // 정육면체 면 색상
 let faceColors = [
@@ -26,15 +24,6 @@ let faceNames = ["앞면", "뒷면", "윗면", "아랫면", "왼쪽면", "오른
 function setup() {
     createCanvas(800, 600, WEBGL);
     
-    // Initialize navigation with back button
-    navigation = new Navigation();
-    navigation.setup();
-    
-    // 슬라이더 생성
-    sliderSize = createSlider(50, 250, cubeSize, 5);
-    sliderSize.position(20, 20);
-    sliderSize.style('width', '150px');
-    
     // 매끄러운 렌더링을 위한 설정
     smooth();
 }
@@ -46,9 +35,6 @@ function draw() {
     // 라이팅 설정
     ambientLight(80, 80, 80);
     directionalLight(255, 255, 255, 0.5, 0.5, -1);
-    
-    // 슬라이더 값으로 정육면체 크기 업데이트
-    cubeSize = sliderSize.value();
     
     // 자동 회전 (매우 느리게)
     rotationY += 0.005;
@@ -298,23 +284,18 @@ function drawUI() {
     push();
     resetMatrix();
     
-    // UI 텍스트
-    fill(0);
-    textSize(14);
-    text("정육면체 크기:", 20, 15);
-    
     // 왼쪽 상단 정보 패널
     fill(255, 255, 255, 200);
-    rect(20, 60, 200, 180, 5);
+    rect(20, 20, 200, 180, 5);
     
     fill(0);
     textSize(16);
-    text("정육면체 특성", 30, 80);
-    text("한 변의 길이: " + cubeSize + " 단위", 30, 105);
-    text("표면적: " + (6 * cubeSize * cubeSize) + " 단위²", 30, 130);
-    text("부피: " + (cubeSize * cubeSize * cubeSize) + " 단위³", 30, 155);
-    text("모서리 수: 12개", 30, 180);
-    text("꼭짓점 수: 8개", 30, 205);
+    text("정육면체 특성", 30, 40);
+    text("한 변의 길이: " + cubeSize + " 단위", 30, 65);
+    text("표면적: " + (6 * cubeSize * cubeSize) + " 단위²", 30, 90);
+    text("부피: " + (cubeSize * cubeSize * cubeSize) + " 단위³", 30, 115);
+    text("모서리 수: 12개", 30, 140);
+    text("꼭짓점 수: 8개", 30, 165);
     
     // 조작 방법 안내
     fill(30, 30, 30, 200);
@@ -328,21 +309,15 @@ function drawUI() {
     text("'d' 키: 치수 표시/숨기기", 590, 110);
     text("마우스 드래그: 회전", 590, 130);
     
-    // Back to Gallery 버튼 그리기
-    navigation.draw();
     pop();
 }
 
 function mousePressed() {
-    // First check if navigation handles the click
-    if (navigation.handleMousePressed()) {
-        return false;
-    }
     return false;
 }
 
 function mouseReleased() {
-    navigation.handleMouseReleased();
+    // 마우스 놓기 처리
 }
 
 function mouseDragged() {

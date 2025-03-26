@@ -1,138 +1,169 @@
 // Sketch variables
-let navigation;
-let torusRadius = 120;     // 토러스의 주요 반지름
-let tubeRadius = 50;      // 토러스의 튜브 반지름
-let rotationX = 0;
-let rotationY = 0;
-let rotationZ = 0;
-let detailX = 24;        // 토러스의 세부 수준 X (원주 방향)
-let detailY = 16;        // 토러스의 세부 수준 Y (튜브 방향)
-let sliderTorusRadius, sliderTubeRadius;
-let showFormulas = true;
-let showCrossSection = false;
-let wireframe = false;
+let dnaRadius = 100;       // DNA 반지름
+let dnaLength = 500;       // DNA 길이
+let nucleotides = 20;      // 뉴클레오티드 수
+let rotationSpeed = 0.01;  // 회전 속도
+let rotationY = 0;         // Y축 회전값
+let basePairs = [];        // 염기쌍 정보
+let showLabels = true;     // 레이블 표시 여부
+let autoRotate = true;     // 자동 회전 여부
+
+// 염기쌍 클래스
+class BasePair {
+    constructor(position, type) {
+        this.position = position;  // DNA에서의 위치 (0 ~ 1)
+        this.type = type;          // 염기쌍 타입 (0: A-T, 1: G-C)
+        this.rotation = random(TWO_PI); // 초기 회전
+        
+        // 염기쌍의 색상
+        if (this.type === 0) {
+            this.color1 = color(255, 100, 100); // A (아데닌) - 빨강
+            this.color2 = color(100, 255, 100); // T (티민) - 초록
+        } else {
+            this.color1 = color(100, 100, 255); // G (구아닌) - 파랑
+            this.color2 = color(255, 255, 100); // C (시토신) - 노랑
+        }
+    }
+    
+    // 염기쌍 표시 함수
+    display(yPos) {
+        push();
+        translate(0, yPos, 0);
+        rotateY(this.rotation + rotationY);
+        
+        // 염기 1 (왼쪽)
+        push();
+        translate(-dnaRadius, 0, 0);
+        fill(this.color1);
+        noStroke();
+        sphere(15);
+        
+        // 레이블 표시
+        if (showLabels) {
+            push();
+            fill(255);
+            textSize(14);
+            textAlign(CENTER);
+            text(this.type === 0 ? "A" : "G", 0, -20);
+            pop();
+        }
+        pop();
+        
+        // 염기 2 (오른쪽)
+        push();
+        translate(dnaRadius, 0, 0);
+        fill(this.color2);
+        noStroke();
+        sphere(15);
+        
+        // 레이블 표시
+        if (showLabels) {
+            push();
+            fill(255);
+            textSize(14);
+            textAlign(CENTER);
+            text(this.type === 0 ? "T" : "C", 0, -20);
+            pop();
+        }
+        pop();
+        
+        // 염기쌍 연결 막대
+        stroke(200);
+        strokeWeight(5);
+        line(-dnaRadius, 0, 0, dnaRadius, 0, 0);
+        
+        pop();
+    }
+}
 
 function setup() {
     createCanvas(800, 600, WEBGL);
     
-    // Initialize navigation with back button
-    navigation = new Navigation();
-    navigation.setup();
-    
-    // 슬라이더 생성
-    sliderTorusRadius = createSlider(50, 200, torusRadius, 5);
-    sliderTorusRadius.position(20, 20);
-    sliderTorusRadius.style('width', '150px');
-    
-    sliderTubeRadius = createSlider(10, 80, tubeRadius, 2);
-    sliderTubeRadius.position(20, 60);
-    sliderTubeRadius.style('width', '150px');
+    // 염기쌍 생성
+    for (let i = 0; i < nucleotides; i++) {
+        let position = i / (nucleotides - 1);
+        let type = random() > 0.5 ? 0 : 1;  // 랜덤하게 A-T 또는 G-C 염기쌍 생성
+        basePairs.push(new BasePair(position, type));
+    }
     
     // 매끄러운 렌더링을 위한 설정
     smooth();
+    setAttributes('antialias', true);
 }
 
 function draw() {
     // 배경 그리기
-    background(240);
+    background(20);
     
-    // 라이팅 설정
+    // 카메라 및 조명 설정
+    orbitControl(3, 3, 0.1);
     ambientLight(60, 60, 60);
-    directionalLight(255, 255, 255, 0.5, 0.5, -1);
-    pointLight(200, 150, 220, 100, -100, 200);
-    
-    // 슬라이더 값으로 토러스 크기 업데이트
-    torusRadius = sliderTorusRadius.value();
-    tubeRadius = sliderTubeRadius.value();
+    pointLight(255, 255, 255, 300, -200, 500);
     
     // 자동 회전
-    rotationX += 0.005;
-    rotationY += 0.01;
-    
-    // 토러스 그리기
-    push();
-    rotateX(rotationX);
-    rotateY(rotationY);
-    
-    // 토러스 렌더링
-    drawTorus();
-    
-    // 좌표축 추가
-    if (showCrossSection) {
-        drawAxes();
-        drawCrossSection();
+    if (autoRotate) {
+        rotationY += rotationSpeed;
     }
     
-    pop();
+    // 이중 나선 DNA 구조 그리기
+    drawDNA();
     
     // 2D 레이어에 UI 그리기
     drawUI();
 }
 
-function drawTorus() {
+function drawDNA() {
     push();
     
-    if (wireframe) {
-        stroke(0);
-        strokeWeight(1);
-        noFill();
-    } else {
-        noStroke();
-        specularMaterial(100, 150, 220);
+    // DNA 중심을 화면 중앙에 위치시키기
+    translate(0, 0, 0);
+    
+    // DNA 가운데 위치해서 위아래로 그릴 수 있도록 회전
+    rotateX(HALF_PI);
+    
+    // DNA 중심축에서 시작하는 위치 조정
+    translate(0, -dnaLength/2, 0);
+    
+    // 두 가닥의 나선 구조 그리기
+    drawHelixes();
+    
+    // 염기쌍 그리기
+    for (let i = 0; i < basePairs.length; i++) {
+        let yPos = i * (dnaLength / (nucleotides - 1));
+        basePairs[i].display(yPos);
     }
     
-    // p5.js 내장 torus 함수 사용
-    torus(torusRadius, tubeRadius, detailX, detailY);
-    
     pop();
 }
 
-function drawCrossSection() {
-    // 토러스의 단면도 그리기
+function drawHelixes() {
     push();
-    stroke(255, 0, 0);
-    strokeWeight(2);
+    // 첫 번째 나선 (빨간색)
+    stroke(255, 150, 150);
+    strokeWeight(8);
     noFill();
+    beginShape();
+    for (let i = 0; i <= 100; i++) {
+        let angle = map(i, 0, 100, 0, TWO_PI * nucleotides / 2);
+        let y = i * (dnaLength / 100);
+        let x = sin(angle + rotationY) * dnaRadius;
+        let z = cos(angle + rotationY) * dnaRadius;
+        vertex(x, y, z);
+    }
+    endShape();
     
-    // 주요 원 그리기
-    push();
-    rotateX(HALF_PI);
-    noFill();
-    stroke(255, 0, 0);
-    circle(0, 0, torusRadius * 2);
-    pop();
-    
-    // 튜브 단면 그리기
-    push();
-    translate(torusRadius, 0, 0);
-    rotateY(HALF_PI);
-    stroke(0, 255, 0);
-    circle(0, 0, tubeRadius * 2);
-    pop();
-    
-    pop();
-}
-
-function drawAxes() {
-    // X축 (빨강)
-    push();
-    stroke(255, 0, 0);
-    strokeWeight(2);
-    line(0, 0, 0, 200, 0, 0);
-    pop();
-    
-    // Y축 (초록)
-    push();
-    stroke(0, 255, 0);
-    strokeWeight(2);
-    line(0, 0, 0, 0, 200, 0);
-    pop();
-    
-    // Z축 (파랑)
-    push();
-    stroke(0, 0, 255);
-    strokeWeight(2);
-    line(0, 0, 0, 0, 0, 200);
+    // 두 번째 나선 (파란색)
+    stroke(150, 150, 255);
+    strokeWeight(8);
+    beginShape();
+    for (let i = 0; i <= 100; i++) {
+        let angle = map(i, 0, 100, 0, TWO_PI * nucleotides / 2) + PI;
+        let y = i * (dnaLength / 100);
+        let x = sin(angle + rotationY) * dnaRadius;
+        let z = cos(angle + rotationY) * dnaRadius;
+        vertex(x, y, z);
+    }
+    endShape();
     pop();
 }
 
@@ -141,62 +172,61 @@ function drawUI() {
     push();
     resetMatrix();
     
-    // UI 텍스트
-    fill(0);
-    textSize(14);
-    text("토러스 주요 반지름 (R):", 20, 15);
-    text("토러스 튜브 반지름 (r):", 20, 55);
-    
     // 왼쪽 상단 정보 패널
-    fill(255, 255, 255, 200);
-    rect(20, 100, 300, 180, 5);
+    fill(0, 0, 30, 200);
+    rect(20, 20, 280, 160, 5);
     
-    fill(0);
+    fill(255);
     textSize(16);
-    text("토러스의 특성", 30, 120);
-    text("주요 반지름(R): " + torusRadius + " 단위", 30, 145);
-    text("튜브 반지름(r): " + tubeRadius + " 단위", 30, 170);
+    text("DNA 분자 구조", 30, 40);
+    text("염기쌍 수: " + nucleotides, 30, 65);
+    text("A-T 염기쌍 수: " + basePairs.filter(bp => bp.type === 0).length, 30, 90);
+    text("G-C 염기쌍 수: " + basePairs.filter(bp => bp.type === 1).length, 30, 115);
+    text("이중 나선 반지름: " + dnaRadius + " 단위", 30, 140);
+    text("염기쌍 간 거리: " + (dnaLength / (nucleotides - 1)) + " 단위", 30, 165);
     
-    // 공식 표시
-    if (showFormulas) {
-        let volume = 2 * PI * PI * torusRadius * tubeRadius * tubeRadius;
-        let surfaceArea = 4 * PI * PI * torusRadius * tubeRadius;
-        
-        text("부피: V = 2π²Rr² = " + nf(volume, 0, 0) + " 단위³", 30, 195);
-        text("표면적: S = 4π²Rr = " + nf(surfaceArea, 0, 0) + " 단위²", 30, 220);
-        text("R: 주요 반지름, r: 튜브 반지름", 30, 245);
-    }
-    
-    // 설명 텍스트
-    fill(30, 30, 30, 200);
+    // 조작 방법 안내
+    fill(0, 0, 30, 200);
+    rect(580, 10, 190, 130, 5);
+    fill(255);
     textSize(14);
-    text("'c' 키: 단면도 표시/숨기기", 580, 20);
-    text("'w' 키: 와이어프레임 모드 전환", 580, 40);
-    text("'f' 키: 공식 표시/숨기기", 580, 60);
+    text("조작 방법:", 590, 30);
+    text("'r' 키: 자동 회전 켜기/끄기", 590, 50);
+    text("'l' 키: 레이블 표시/숨기기", 590, 70);
+    text("'n' 키: 새로운 DNA 구조 생성", 590, 90);
+    text("마우스 드래그: 회전", 590, 110);
+    text("휠: 확대/축소", 590, 130);
     
-    // Back to Gallery 버튼 그리기
-    navigation.draw();
     pop();
 }
 
 function mousePressed() {
-    // First check if navigation handles the click
-    if (navigation.handleMousePressed()) {
-        return false;
-    }
     return false;
 }
 
 function mouseReleased() {
-    navigation.handleMouseReleased();
+    // 마우스 놓기 처리
+}
+
+function mouseDragged() {
+    // 마우스 드래그로 회전 조작 (자동 회전이 꺼진 경우만)
+    if (!autoRotate) {
+        rotationY += (mouseX - pmouseX) * 0.01;
+    }
 }
 
 function keyPressed() {
-    if (key === 'c' || key === 'C') {
-        showCrossSection = !showCrossSection;
-    } else if (key === 'w' || key === 'W') {
-        wireframe = !wireframe;
-    } else if (key === 'f' || key === 'F') {
-        showFormulas = !showFormulas;
+    if (key === 'r' || key === 'R') {
+        autoRotate = !autoRotate;
+    } else if (key === 'l' || key === 'L') {
+        showLabels = !showLabels;
+    } else if (key === 'n' || key === 'N') {
+        // 새로운 DNA 구조 생성
+        basePairs = [];
+        for (let i = 0; i < nucleotides; i++) {
+            let position = i / (nucleotides - 1);
+            let type = random() > 0.5 ? 0 : 1;
+            basePairs.push(new BasePair(position, type));
+        }
     }
 } 

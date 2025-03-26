@@ -1,229 +1,271 @@
 // Sketch variables
-let navigation;
-let radius = 150;          // 구의 반지름
-let rotationX = 0;
-let rotationY = 0;
-let detailLevel = 32;      // 구의 디테일 레벨
-let icosaDetail = 0;       // 정이십면체 디테일 레벨 (0: 기본 정이십면체)
-let showIcosahedron = true;
-let showSphere = false;
-let wireframe = false;
-let toggleAnimation = true;
-let showLabels = true;
+let layers = 8;            // 만다라 레이어 수
+let segments = 16;         // 각 레이어의 세그먼트 수
+let maxRadius = 250;       // 최대 반지름
+let rotationSpeed = 0.005; // 회전 속도
+let t = 0;                 // 시간 변수
+let colorOffset = 0;       // 색상 오프셋
+let symmetry = 8;          // 대칭 수
+let detail = 0.5;          // 세부 사항 수준 (0.1 ~ 1.0)
 
-// 정이십면체 정보
-let phi = (1 + sqrt(5)) / 2;  // 황금비
+// 애니메이션 및 인터랙션 설정
+let autoSpin = true;       // 자동 회전 여부
+let showInfo = true;       // 정보 표시 여부
+let mouseInteraction = true; // 마우스 인터랙션 허용 여부
+let pulseEffect = true;    // 펄스 효과 여부
+let colorMode = 0;         // 색상 모드 (0: 무지개, 1: 단일 색상, 2: 흑백)
+
+// 만다라 레이어 설정
+let layerConfigs = [];     // 레이어 구성
 
 function setup() {
-    createCanvas(800, 600, WEBGL);
+    createCanvas(800, 600);
     
-    // Initialize navigation with back button
-    navigation = new Navigation();
-    navigation.setup();
+    // 레이어 구성 초기화
+    initializeLayerConfigs();
     
     // 매끄러운 렌더링을 위한 설정
     smooth();
     
-    // Slider for radius
-    radiusSlider = createSlider(50, 250, radius, 5);
-    radiusSlider.position(20, 20);
-    radiusSlider.style('width', '150px');
+    // 색상 모드 설정
+    colorMode = HSB, 360, 100, 100, 1;
+}
+
+function initializeLayerConfigs() {
+    layerConfigs = [];
+    
+    // 각 레이어별 설정 생성
+    for (let i = 0; i < layers; i++) {
+        let radius = map(i, 0, layers - 1, maxRadius * 0.1, maxRadius);
+        let segmentCount = floor(segments * (i + 1) / layers) * symmetry;
+        if (segmentCount < symmetry) segmentCount = symmetry;
+        
+        layerConfigs.push({
+            radius: radius,
+            segmentCount: segmentCount,
+            rotation: random(TWO_PI),
+            rotationSpeed: random(-0.02, 0.02),
+            amplitude: random(0.1, 0.5) * detail,
+            frequency: floor(random(2, 8)),
+            thickness: map(i, 0, layers - 1, 15, 2)
+        });
+    }
 }
 
 function draw() {
-    // 배경 그리기
-    background(240);
+    // 배경 그리기 (어두운 색상)
+    background(230, 50, 10);
     
-    // 라이팅 설정
-    ambientLight(60, 60, 60);
-    directionalLight(255, 255, 255, 0.5, 0.5, -1);
-    pointLight(200, 150, 220, 100, -100, 200);
+    // 시간 업데이트
+    t += 0.01;
     
-    // 반지름 업데이트
-    radius = radiusSlider.value();
+    // 중앙 정렬
+    translate(width / 2, height / 2);
     
     // 자동 회전
-    if (toggleAnimation) {
-        rotationX += 0.01;
-        rotationY += 0.01;
+    if (autoSpin) {
+        rotate(t * rotationSpeed);
     }
     
-    // 3D 객체 그리기
-    push();
-    rotateX(rotationX);
-    rotateY(rotationY);
-    
-    if (wireframe) {
-        stroke(20);
-        strokeWeight(1);
-        noFill();
-    } else {
-        noStroke();
+    // 마우스 인터랙션
+    if (mouseInteraction && mouseIsPressed) {
+        // 마우스 위치에 따라 만다라 변형
+        let mouseAngle = atan2(mouseY - height/2, mouseX - width/2);
+        let mouseDist = dist(mouseX, mouseY, width/2, height/2);
+        let mouseInfluence = constrain(map(mouseDist, 0, 200, 0, 1), 0, 1);
+        
+        rotate(mouseAngle * mouseInfluence * 0.2);
+        scale(1 + mouseInfluence * 0.1 * sin(t));
     }
     
-    // 정이십면체 그리기
-    if (showIcosahedron) {
-        if (!wireframe) {
-            specularMaterial(100, 180, 220);
-        }
-        drawIcosahedron();
+    // 레이어 순서대로 그리기 (안쪽부터 바깥쪽으로)
+    for (let i = 0; i < layers; i++) {
+        drawMandalaLayer(i);
     }
-    
-    // 구 그리기
-    if (showSphere) {
-        if (!wireframe) {
-            specularMaterial(220, 180, 100, 150);
-        }
-        sphere(radius, detailLevel, detailLevel);
-    }
-    
-    // 좌표축 그리기 (옵션)
-    if (showLabels) {
-        drawAxes();
-    }
-    
-    pop();
     
     // 2D 레이어에 UI 그리기
     drawUI();
+    
+    // 색상 오프셋 업데이트
+    if (colorMode === 0) {  // 무지개 모드일 때만 색상 순환
+        colorOffset = (colorOffset + 0.5) % 360;
+    }
 }
 
-function drawIcosahedron() {
-    // 정이십면체 정점 (기본)
-    let vertices = [
-        [-1, phi, 0], [1, phi, 0], [-1, -phi, 0], [1, -phi, 0],
-        [0, -1, phi], [0, 1, phi], [0, -1, -phi], [0, 1, -phi],
-        [phi, 0, -1], [phi, 0, 1], [-phi, 0, -1], [-phi, 0, 1]
-    ];
+function drawMandalaLayer(layerIndex) {
+    let config = layerConfigs[layerIndex];
+    let radius = config.radius;
     
-    // 정이십면체 삼각형 면 인덱스 (총 20면)
-    let faces = [
-        [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
-        [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
-        [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
-        [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
-    ];
-    
-    // 정점을 구면 위로 투영 (구의 반지름에 맞게 정규화)
-    for (let i = 0; i < vertices.length; i++) {
-        let v = vertices[i];
-        let mag = sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-        vertices[i] = [
-            (v[0] / mag) * radius,
-            (v[1] / mag) * radius,
-            (v[2] / mag) * radius
-        ];
+    // 펄스 효과
+    if (pulseEffect) {
+        radius += sin(t * 2 + layerIndex * 0.5) * 10 * detail;
     }
     
-    // 정이십면체 그리기
-    beginShape(TRIANGLES);
-    for (let i = 0; i < faces.length; i++) {
-        let face = faces[i];
+    push();
+    // 각 레이어마다 다른 회전
+    rotate(config.rotation + t * config.rotationSpeed);
+    
+    // 특정 레이어일 때 반전 회전
+    if (layerIndex % 2 === 1) {
+        rotate(t * -config.rotationSpeed * 2);
+    }
+    
+    // 세그먼트 그리기
+    for (let j = 0; j < config.segmentCount; j++) {
+        let angle = TWO_PI * j / config.segmentCount;
+        let nextAngle = TWO_PI * (j + 1) / config.segmentCount;
         
-        // 각 면의 꼭지점 추가
-        for (let j = 0; j < 3; j++) {
-            let v = vertices[face[j]];
-            vertex(v[0], v[1], v[2]);
+        // 색상 설정
+        let hue, saturation, brightness;
+        
+        if (colorMode === 0) {
+            // 무지개 모드
+            hue = (colorOffset + map(j, 0, config.segmentCount, 0, 360)) % 360;
+            saturation = 70 + 30 * sin(t + layerIndex);
+            brightness = 90;
+        } else if (colorMode === 1) {
+            // 단일 색상 모드 (파란색/보라색 그라데이션)
+            hue = 270; // 보라색 베이스
+            saturation = 60 + 40 * (layerIndex / layers);
+            brightness = 100 - 20 * (layerIndex / layers);
+        } else {
+            // 흑백 모드
+            hue = 0;
+            saturation = 0;
+            brightness = 50 + 40 * sin(t + j * 0.1 + layerIndex * 0.5);
         }
+        
+        fill(hue, saturation, brightness, 0.7);
+        
+        // 윤곽선 설정
+        if (layerIndex === 0 || layerIndex === layers - 1) {
+            strokeWeight(2);
+            stroke(hue, saturation, brightness - 30);
+        } else {
+            noStroke();
+        }
+        
+        // 세그먼트 모양 그리기
+        beginShape();
+        
+        // 원의 내부 점
+        let innerRadius = radius * 0.6;
+        let midRadius = radius * 0.8;
+        
+        // 파형 적용
+        let wave1 = sin(angle * config.frequency + t) * config.amplitude;
+        let wave2 = sin(nextAngle * config.frequency + t) * config.amplitude;
+        
+        // 내부 점
+        vertex(cos(angle) * innerRadius * (1 + wave1), sin(angle) * innerRadius * (1 + wave1));
+        
+        // 중간 제어점
+        let ctrlAngle = (angle + nextAngle) / 2;
+        let ctrlRadius = midRadius * (1 + (wave1 + wave2) / 2);
+        
+        // 베지어 곡선으로 부드러운 형태 만들기
+        bezierVertex(
+            cos(ctrlAngle) * (ctrlRadius + config.thickness), 
+            sin(ctrlAngle) * (ctrlRadius + config.thickness),
+            cos(ctrlAngle) * (ctrlRadius + config.thickness), 
+            sin(ctrlAngle) * (ctrlRadius + config.thickness),
+            cos(nextAngle) * innerRadius * (1 + wave2), 
+            sin(nextAngle) * innerRadius * (1 + wave2)
+        );
+        
+        // 외부 점
+        vertex(cos(nextAngle) * radius * (1 + wave2), sin(nextAngle) * radius * (1 + wave2));
+        
+        // 외부 제어점
+        bezierVertex(
+            cos(ctrlAngle) * (radius + config.thickness), 
+            sin(ctrlAngle) * (radius + config.thickness),
+            cos(ctrlAngle) * (radius + config.thickness), 
+            sin(ctrlAngle) * (radius + config.thickness),
+            cos(angle) * radius * (1 + wave1), 
+            sin(angle) * radius * (1 + wave1)
+        );
+        
+        endShape(CLOSE);
     }
-    endShape();
-}
-
-function drawAxes() {
-    // X축 (빨강)
-    push();
-    stroke(255, 0, 0);
-    strokeWeight(2);
-    line(0, 0, 0, radius + 50, 0, 0);
-    pop();
     
-    // Y축 (초록)
-    push();
-    stroke(0, 255, 0);
-    strokeWeight(2);
-    line(0, 0, 0, 0, radius + 50, 0);
-    pop();
-    
-    // Z축 (파랑)
-    push();
-    stroke(0, 0, 255);
-    strokeWeight(2);
-    line(0, 0, 0, 0, 0, radius + 50);
     pop();
 }
 
 function drawUI() {
-    // WebGL에서는 일반적인 2D 그리기를 위해 resetMatrix 사용
     push();
+    // 다시 원점으로 리셋
     resetMatrix();
     
-    // UI 텍스트
-    fill(0);
-    textSize(14);
-    text("반지름:", 20, 15);
-    
-    // 왼쪽 상단 정보 패널
-    fill(255, 255, 255, 200);
-    rect(20, 60, 270, 170, 5);
-    
-    fill(0);
-    textSize(16);
-    text("정이십면체 및 구의 특성", 30, 80);
-    text("반지름: " + radius + " 단위", 30, 105);
-    
-    // 정이십면체 정보
-    text("정이십면체 특성:", 30, 135);
-    text("- 정점 수: 12", 40, 155);
-    text("- 모서리 수: 30", 40, 175);
-    text("- 면 수: 20 (정삼각형)", 40, 195);
+    if (showInfo) {
+        // 왼쪽 상단 정보 패널
+        fill(230, 20, 90, 0.7);
+        rect(20, 20, 200, 180, 10);
+        
+        fill(0);
+        textSize(16);
+        text("만다라 패턴 생성기", 30, 40);
+        text("레이어 수: " + layers, 30, 65);
+        text("대칭 수: " + symmetry, 30, 90);
+        text("세그먼트 수: " + segments, 30, 115);
+        text("상세도: " + nf(detail, 1, 1), 30, 140);
+        text("색상 모드: " + ["무지개", "그라데이션", "흑백"][colorMode], 30, 165);
+        text("FPS: " + nf(frameRate(), 1, 1), 30, 190);
+    }
     
     // 조작 방법 안내
-    fill(30, 30, 30, 200);
-    rect(580, 10, 190, 130, 5);
-    fill(255);
+    fill(230, 20, 90, 0.7);
+    rect(580, 10, 190, 160, 10);
+    fill(0);
     textSize(14);
     text("조작 방법:", 590, 30);
-    text("'i' 키: 정이십면체 표시/숨기기", 590, 50);
-    text("'s' 키: 구 표시/숨기기", 590, 70);
-    text("'w' 키: 와이어프레임 모드", 590, 90);
-    text("'a' 키: 애니메이션 켜기/끄기", 590, 110);
-    text("'l' 키: 좌표축 표시/숨기기", 590, 130);
+    text("'s' 키: 자동 회전 켜기/끄기", 590, 50);
+    text("'i' 키: 정보 표시/숨기기", 590, 70);
+    text("'m' 키: 마우스 인터랙션 켜기/끄기", 590, 90);
+    text("'p' 키: 펄스 효과 켜기/끄기", 590, 110);
+    text("'c' 키: 색상 모드 변경", 590, 130);
+    text("'r' 키: 새 패턴 생성", 590, 150);
     
-    // Back to Gallery 버튼 그리기
-    navigation.draw();
     pop();
 }
 
-function mousePressed() {
-    // First check if navigation handles the click
-    if (navigation.handleMousePressed()) {
-        return false;
+function keyPressed() {
+    if (key === 's' || key === 'S') {
+        autoSpin = !autoSpin;
+    } else if (key === 'i' || key === 'I') {
+        showInfo = !showInfo;
+    } else if (key === 'm' || key === 'M') {
+        mouseInteraction = !mouseInteraction;
+    } else if (key === 'p' || key === 'P') {
+        pulseEffect = !pulseEffect;
+    } else if (key === 'c' || key === 'C') {
+        colorMode = (colorMode + 1) % 3;
+    } else if (key === 'r' || key === 'R') {
+        // 새로운 패턴 생성
+        initializeLayerConfigs();
+    } else if (key === '+' || keyCode === UP_ARROW) {
+        // 복잡도 증가
+        detail = constrain(detail + 0.1, 0.1, 1.0);
+        initializeLayerConfigs();
+    } else if (key === '-' || keyCode === DOWN_ARROW) {
+        // 복잡도 감소
+        detail = constrain(detail - 0.1, 0.1, 1.0);
+        initializeLayerConfigs();
+    } else if (keyCode === LEFT_ARROW) {
+        // 대칭 감소
+        symmetry = max(3, symmetry - 1);
+        initializeLayerConfigs();
+    } else if (keyCode === RIGHT_ARROW) {
+        // 대칭 증가
+        symmetry = min(16, symmetry + 1);
+        initializeLayerConfigs();
     }
+}
+
+function mousePressed() {
     return false;
 }
 
 function mouseReleased() {
-    navigation.handleMouseReleased();
-}
-
-function mouseDragged() {
-    // 마우스 드래그로 회전 조작 (애니메이션 꺼진 경우)
-    if (!toggleAnimation) {
-        rotationY += (mouseX - pmouseX) * 0.01;
-        rotationX += (mouseY - pmouseY) * 0.01;
-    }
-}
-
-function keyPressed() {
-    if (key === 'i' || key === 'I') {
-        showIcosahedron = !showIcosahedron;
-    } else if (key === 's' || key === 'S') {
-        showSphere = !showSphere;
-    } else if (key === 'w' || key === 'W') {
-        wireframe = !wireframe;
-    } else if (key === 'a' || key === 'A') {
-        toggleAnimation = !toggleAnimation;
-    } else if (key === 'l' || key === 'L') {
-        showLabels = !showLabels;
-    }
+    // 마우스 놓기 처리
 } 
