@@ -1,12 +1,13 @@
 // -------------------------
-// Planche de Galton (개선 버전)
+// Planche de Galton (핀 반지름 수정 가능 버전)
 // -------------------------
 
 // [1] 전역 변수 설정
 let balls = [];           // 공 배열
-let gridSize = 10;        // 격자 간격
+let gridSize = 20;        // 격자 간격
+let pinRadius = 2;        // ★ 원하는 반지름으로 수정 ★
 let counts = [];          // 각 열별 공 개수
-let maxBalls = 2000;      // 생성할 공 개수 제한
+let maxBalls = 10000;      // 생성할 공 개수 제한
 let deadBalls = [];       // 제거될 공들
 
 // 보드와 영역 설정
@@ -17,14 +18,7 @@ let topRegionHeight = 600; // 핀(위쪽) 영역의 높이
 function setup() {
   createCanvas(boardWidth, boardHeight);
   
-  // gridSize와 boardWidth로 컬럼 개수를 계산
-  // (아래는 Python으로 계산한 예시)
-  // >>> Python 코드 예:
-  // >>> boardWidth = 600
-  // >>> gridSize = 10
-  // >>> columns = boardWidth // gridSize - 1
-  // >>> print(columns)  # 59
-  
+  // 컬럼 개수에 맞춰 counts 배열 초기화
   for (let i = 0; i < boardWidth / gridSize - 1; i++) {
     counts[i] = 0;
   }
@@ -73,7 +67,9 @@ function displayBoard() {
     for (let y = gridSize; y < topRegionHeight; y += gridSize) {
       // 짝수 행에서는 약간 왼쪽으로 핀을 이동 (지그재그 느낌)
       let xo = (y % (gridSize * 2) === 0) ? x - gridSize / 2 : x;
-      circle(xo, y, 2);
+      
+      // ★ pinRadius를 사용하여 핀을 그린다 (지름 = pinRadius * 2)
+      circle(xo, y, pinRadius * 2);
     }
   }
   
@@ -101,9 +97,8 @@ function displayBars() {
     let x = (i + 1) * gridSize;
     
     // 누적된 공 개수에 따라 높이 증가
-    let barHeight = counts[i] / 2;  // 기존 코드와 동일(2로 나눔)
-    let topY = height - barHeight;  // 바닥에서 barHeight만큼 위로
-    
+    let barHeight = counts[i] / 2;  
+    let topY = height - barHeight;  
     line(x, height, x, topY);
   }
   
@@ -140,11 +135,14 @@ class Ball {
       
       // [3] 바닥에 닿았는지 체크
       let column = int((this.x - gridSize / 2) / gridSize);
-      
-      // counts[column]만큼 이미 쌓여 있으면, 그 위에서 정지
-      if (this.y >= height - counts[column] / 2) {
+      if (column >= 0 && column < counts.length) {
+        if (this.y >= height - counts[column] / 2) {
+          deadBalls.push(this);
+          counts[column]++;
+        }
+      } else {
+        // 범위 벗어나면 제거
         deadBalls.push(this);
-        counts[column] += 1;
       }
     }
   }
