@@ -1,232 +1,266 @@
-// Sketch variables
-let dnaRadius = 100;       // DNA 반지름
-let dnaLength = 500;       // DNA 길이
-let nucleotides = 20;      // 뉴클레오티드 수
-let rotationSpeed = 0.01;  // 회전 속도
-let rotationY = 0;         // Y축 회전값
-let basePairs = [];        // 염기쌍 정보
-let showLabels = true;     // 레이블 표시 여부
-let autoRotate = true;     // 자동 회전 여부
-
-// 염기쌍 클래스
-class BasePair {
-    constructor(position, type) {
-        this.position = position;  // DNA에서의 위치 (0 ~ 1)
-        this.type = type;          // 염기쌍 타입 (0: A-T, 1: G-C)
-        this.rotation = random(TWO_PI); // 초기 회전
-        
-        // 염기쌍의 색상
-        if (this.type === 0) {
-            this.color1 = color(255, 100, 100); // A (아데닌) - 빨강
-            this.color2 = color(100, 255, 100); // T (티민) - 초록
-        } else {
-            this.color1 = color(100, 100, 255); // G (구아닌) - 파랑
-            this.color2 = color(255, 255, 100); // C (시토신) - 노랑
-        }
-    }
-    
-    // 염기쌍 표시 함수
-    display(yPos) {
-        push();
-        translate(0, yPos, 0);
-        rotateY(this.rotation + rotationY);
-        
-        // 염기 1 (왼쪽)
-        push();
-        translate(-dnaRadius, 0, 0);
-        fill(this.color1);
-        noStroke();
-        sphere(15);
-        
-        // 레이블 표시
-        if (showLabels) {
-            push();
-            fill(255);
-            textSize(14);
-            textAlign(CENTER);
-            text(this.type === 0 ? "A" : "G", 0, -20);
-            pop();
-        }
-        pop();
-        
-        // 염기 2 (오른쪽)
-        push();
-        translate(dnaRadius, 0, 0);
-        fill(this.color2);
-        noStroke();
-        sphere(15);
-        
-        // 레이블 표시
-        if (showLabels) {
-            push();
-            fill(255);
-            textSize(14);
-            textAlign(CENTER);
-            text(this.type === 0 ? "T" : "C", 0, -20);
-            pop();
-        }
-        pop();
-        
-        // 염기쌍 연결 막대
-        stroke(200);
-        strokeWeight(5);
-        line(-dnaRadius, 0, 0, dnaRadius, 0, 0);
-        
-        pop();
-    }
-}
+let mirrors = [];
+let particles = [];
+let particleCount = 2;
+let tracePoints = [];
+let isDragging = false;
+let draggedMirror = null;
+let dragOffset = { x: 0, y: 0 };
 
 function setup() {
-    createCanvas(800, 600, WEBGL);
-    
-    // 염기쌍 생성
-    for (let i = 0; i < nucleotides; i++) {
-        let position = i / (nucleotides - 1);
-        let type = random() > 0.5 ? 0 : 1;  // 랜덤하게 A-T 또는 G-C 염기쌍 생성
-        basePairs.push(new BasePair(position, type));
-    }
-    
-    // 매끄러운 렌더링을 위한 설정
-    smooth();
-    setAttributes('antialias', true);
+  createCanvas(800, 600);
+  
+  // 거울 배치
+  mirrors.push({ x1: 200, y1: 200, x2: 400, y2: 200 });
+  mirrors.push({ x1: 600, y1: 200, x2: 700, y2: 300 });
+  mirrors.push({ x1: 500, y1: 400, x2: 600, y2: 450 });
+  mirrors.push({ x1: 100, y1: 300, x2: 150, y2: 450 });
+  
+  // 광자 생성
+  for (let i = 0; i < particleCount; i++) {
+    createParticle();
+  }
+  
+  // 첫 번째 광자 색상 파란색으로 변경
+  if (particles[0]) {
+    particles[0].color = { r: 0, g: 100, b: 255 };
+    particles[0].id = 0; // 고유 ID 부여
+  }
+  
+  // 두 번째 광자 색상 (기본값 노란색 유지)
+  if (particles[1]) {
+    particles[1].color = { r: 255, g: 255, b: 0 };
+    particles[1].id = 1;
+  }
+  
+  smooth();
 }
 
 function draw() {
-    // 배경 그리기
-    background(20);
-    
-    // 카메라 및 조명 설정
-    orbitControl(3, 3, 0.1);
-    ambientLight(60, 60, 60);
-    pointLight(255, 255, 255, 300, -200, 500);
-    
-    // 자동 회전
-    if (autoRotate) {
-        rotationY += rotationSpeed;
-    }
-    
-    // 이중 나선 DNA 구조 그리기
-    drawDNA();
-    
-    // 2D 레이어에 UI 그리기
-    drawUI();
+  background(0);
+  drawMirrors();
+  drawTraces();
+  updateParticles();
 }
 
-function drawDNA() {
-    push();
-    
-    // DNA 중심을 화면 중앙에 위치시키기
-    translate(0, 0, 0);
-    
-    // DNA 가운데 위치해서 위아래로 그릴 수 있도록 회전
-    rotateX(HALF_PI);
-    
-    // DNA 중심축에서 시작하는 위치 조정
-    translate(0, -dnaLength/2, 0);
-    
-    // 두 가닥의 나선 구조 그리기
-    drawHelixes();
-    
-    // 염기쌍 그리기
-    for (let i = 0; i < basePairs.length; i++) {
-        let yPos = i * (dnaLength / (nucleotides - 1));
-        basePairs[i].display(yPos);
-    }
-    
-    pop();
+// 거울 그리기 (흰색)
+function drawMirrors() {
+  stroke(255);
+  strokeWeight(3);
+  for (let mirror of mirrors) {
+    line(mirror.x1, mirror.y1, mirror.x2, mirror.y2);
+  }
 }
 
-function drawHelixes() {
-    push();
-    // 첫 번째 나선 (빨간색)
-    stroke(255, 150, 150);
-    strokeWeight(8);
-    noFill();
-    beginShape();
-    for (let i = 0; i <= 100; i++) {
-        let angle = map(i, 0, 100, 0, TWO_PI * nucleotides / 2);
-        let y = i * (dnaLength / 100);
-        let x = sin(angle + rotationY) * dnaRadius;
-        let z = cos(angle + rotationY) * dnaRadius;
-        vertex(x, y, z);
-    }
-    endShape();
+// 광자 업데이트
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    let p = particles[i];
     
-    // 두 번째 나선 (파란색)
-    stroke(150, 150, 255);
-    strokeWeight(8);
-    beginShape();
-    for (let i = 0; i <= 100; i++) {
-        let angle = map(i, 0, 100, 0, TWO_PI * nucleotides / 2) + PI;
-        let y = i * (dnaLength / 100);
-        let x = sin(angle + rotationY) * dnaRadius;
-        let z = cos(angle + rotationY) * dnaRadius;
-        vertex(x, y, z);
+    p.x += p.vx;
+    p.y += p.vy;
+
+    // 경로 기록 (모든 광자)
+    if (frameCount % 2 === 0) {
+      tracePoints.push({
+        x: p.x,
+        y: p.y,
+        life: 80,
+        particleId: p.id,
+        isCollision: false
+      });
     }
-    endShape();
-    pop();
+
+    // 벽 충돌 처리
+    handleWallCollision(p);
+
+    // 광자 그리기 (개별 색상 적용)
+    fill(p.color.r, p.color.g, p.color.b);
+    noStroke();
+    circle(p.x, p.y, 6);
+
+    // 거울 충돌 처리
+    checkMirrorCollisions(p);
+  }
 }
 
-function drawUI() {
-    // WebGL에서는 일반적인 2D 그리기를 위해 resetMatrix 사용
-    push();
-    resetMatrix();
-    
-    // 왼쪽 상단 정보 패널
-    fill(0, 0, 30, 200);
-    rect(20, 20, 280, 160, 5);
-    
-    fill(255);
-    textSize(16);
-    text("DNA 분자 구조", 30, 40);
-    text("염기쌍 수: " + nucleotides, 30, 65);
-    text("A-T 염기쌍 수: " + basePairs.filter(bp => bp.type === 0).length, 30, 90);
-    text("G-C 염기쌍 수: " + basePairs.filter(bp => bp.type === 1).length, 30, 115);
-    text("이중 나선 반지름: " + dnaRadius + " 단위", 30, 140);
-    text("염기쌍 간 거리: " + (dnaLength / (nucleotides - 1)) + " 단위", 30, 165);
-    
-    // 조작 방법 안내
-    fill(0, 0, 30, 200);
-    rect(580, 10, 190, 130, 5);
-    fill(255);
-    textSize(14);
-    text("조작 방법:", 590, 30);
-    text("'r' 키: 자동 회전 켜기/끄기", 590, 50);
-    text("'l' 키: 레이블 표시/숨기기", 590, 70);
-    text("'n' 키: 새로운 DNA 구조 생성", 590, 90);
-    text("마우스 드래그: 회전", 590, 110);
-    text("휠: 확대/축소", 590, 130);
-    
-    pop();
+// 벽 충돌 처리
+function handleWallCollision(p) {
+  let bounced = false;
+  
+  if (p.x < 0) { p.x = 0; p.vx = -p.vx; bounced = true; }
+  else if (p.x > width) { p.x = width; p.vx = -p.vx; bounced = true; }
+  if (p.y < 0) { p.y = 0; p.vy = -p.vy; bounced = true; }
+  else if (p.y > height) { p.y = height; p.vy = -p.vy; bounced = true; }
+
+  if (bounced) {
+    tracePoints.push({
+      x: p.x,
+      y: p.y,
+      life: 120,
+      particleId: p.id,
+      isCollision: true
+    });
+  }
 }
 
+// 거울 충돌 처리
+function checkMirrorCollisions(p) {
+  for (let mirror of mirrors) {
+    let prevX = p.x - p.vx;
+    let prevY = p.y - p.vy;
+    
+    let intersection = rayLineIntersection(
+      prevX, prevY, p.x, p.y,
+      mirror.x1, mirror.y1, mirror.x2, mirror.y2
+    );
+    
+    if (intersection) {
+      // 반사 계산
+      let mirrorVec = createVector(mirror.x2 - mirror.x1, mirror.y2 - mirror.y1);
+      let normal = createVector(-mirrorVec.y, mirrorVec.x).normalize();
+      let incident = createVector(p.vx, p.vy);
+      let dot = incident.dot(normal);
+      
+      p.vx = p.vx - 2 * dot * normal.x;
+      p.vy = p.vy - 2 * dot * normal.y;
+      
+      p.x = intersection.x + p.vx * 0.1;
+      p.y = intersection.y + p.vy * 0.1;
+      
+      // 충돌 점 기록
+      tracePoints.push({
+        x: intersection.x,
+        y: intersection.y,
+        life: 120,
+        particleId: p.id,
+        isCollision: true
+      });
+      
+      break;
+    }
+  }
+}
+
+// 경로 그리기
+function drawTraces() {
+  for (let i = tracePoints.length - 1; i >= 0; i--) {
+    let point = tracePoints[i];
+    point.life -= 1;
+    
+    if (point.life <= 0) {
+      tracePoints.splice(i, 1);
+      continue;
+    }
+    
+    // 첫 번째 광자(파란색)의 경로는 청록색으로
+    if (point.particleId === 0) {
+      fill(0, 200, 255, point.life * 2); // 청록색
+    } 
+    // 두 번째 광자(노란색)의 경로는 주황색으로
+    else {
+      fill(255, 150, 0, point.life); // 주황색
+    }
+    
+    noStroke();
+    circle(point.x, point.y, point.isCollision ? 8 : 3);
+  }
+}
+
+// 광자 생성
+function createParticle() {
+  let angle = random(TWO_PI);
+  particles.push({
+    x: width/2 + random(-100, 100),
+    y: height/2 + random(-100, 100),
+    vx: cos(angle) * 3,
+    vy: sin(angle) * 3,
+    color: { r: 255, g: 255, b: 0 }, // 기본값: 노란색
+    id: particles.length
+  });
+}
+
+// 선분 교차 계산
+function rayLineIntersection(x1, y1, x2, y2, x3, y3, x4, y4) {
+  let denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+  if (Math.abs(denom) < 0.0001) return null;
+  
+  let ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+  let ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+  
+  if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) {
+    return {
+      x: x1 + ua * (x2 - x1),
+      y: y1 + ua * (y2 - y1)
+    };
+  }
+  return null;
+}
+
+// 마우스 인터랙션 (거울 드래그)
 function mousePressed() {
-    return false;
-}
-
-function mouseReleased() {
-    // 마우스 놓기 처리
+  let minDist = 20;
+  for (let mirror of mirrors) {
+    let d1 = dist(mouseX, mouseY, mirror.x1, mirror.y1);
+    let d2 = dist(mouseX, mouseY, mirror.x2, mirror.y2);
+    let d3 = distToLine(mouseX, mouseY, mirror.x1, mirror.y1, mirror.x2, mirror.y2);
+    
+    if (d1 < minDist) {
+      isDragging = true;
+      draggedMirror = mirror;
+      dragOffset = { x: mouseX - mirror.x1, y: mouseY - mirror.y1 };
+      mirror.dragPoint = 'start';
+      break;
+    } else if (d2 < minDist) {
+      isDragging = true;
+      draggedMirror = mirror;
+      dragOffset = { x: mouseX - mirror.x2, y: mouseY - mirror.y2 };
+      mirror.dragPoint = 'end';
+      break;
+    } else if (d3 < minDist) {
+      isDragging = true;
+      draggedMirror = mirror;
+      dragOffset = { 
+        x: mouseX - (mirror.x1 + mirror.x2)/2, 
+        y: mouseY - (mirror.y1 + mirror.y2)/2 
+      };
+      mirror.dragPoint = 'middle';
+      break;
+    }
+  }
 }
 
 function mouseDragged() {
-    // 마우스 드래그로 회전 조작 (자동 회전이 꺼진 경우만)
-    if (!autoRotate) {
-        rotationY += (mouseX - pmouseX) * 0.01;
+  if (isDragging && draggedMirror) {
+    if (draggedMirror.dragPoint === 'start') {
+      draggedMirror.x1 = mouseX - dragOffset.x;
+      draggedMirror.y1 = mouseY - dragOffset.y;
+    } else if (draggedMirror.dragPoint === 'end') {
+      draggedMirror.x2 = mouseX - dragOffset.x;
+      draggedMirror.y2 = mouseY - dragOffset.y;
+    } else {
+      let dx = mouseX - dragOffset.x - (draggedMirror.x1 + draggedMirror.x2)/2;
+      let dy = mouseY - dragOffset.y - (draggedMirror.y1 + draggedMirror.y2)/2;
+      draggedMirror.x1 += dx;
+      draggedMirror.y1 += dy;
+      draggedMirror.x2 += dx;
+      draggedMirror.y2 += dy;
     }
+  }
 }
 
-function keyPressed() {
-    if (key === 'r' || key === 'R') {
-        autoRotate = !autoRotate;
-    } else if (key === 'l' || key === 'L') {
-        showLabels = !showLabels;
-    } else if (key === 'n' || key === 'N') {
-        // 새로운 DNA 구조 생성
-        basePairs = [];
-        for (let i = 0; i < nucleotides; i++) {
-            let position = i / (nucleotides - 1);
-            let type = random() > 0.5 ? 0 : 1;
-            basePairs.push(new BasePair(position, type));
-        }
-    }
-} 
+function mouseReleased() {
+  isDragging = false;
+}
+
+function distToLine(px, py, x1, y1, x2, y2) {
+  let lineLen = dist(x1, y1, x2, y2);
+  if (lineLen === 0) return dist(px, py, x1, y1);
+  
+  let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / (lineLen * lineLen);
+  t = constrain(t, 0, 1);
+  
+  let projX = x1 + t * (x2 - x1);
+  let projY = y1 + t * (y2 - y1);
+  
+  return dist(px, py, projX, projY);
+}

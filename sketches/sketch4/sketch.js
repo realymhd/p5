@@ -1,271 +1,159 @@
-// Sketch variables
-let layers = 8;            // 만다라 레이어 수
-let segments = 16;         // 각 레이어의 세그먼트 수
-let maxRadius = 250;       // 최대 반지름
-let rotationSpeed = 0.005; // 회전 속도
-let t = 0;                 // 시간 변수
-let colorOffset = 0;       // 색상 오프셋
-let symmetry = 8;          // 대칭 수
-let detail = 0.5;          // 세부 사항 수준 (0.1 ~ 1.0)
+// -------------------------
+// Planche de Galton (개선 버전)
+// -------------------------
 
-// 애니메이션 및 인터랙션 설정
-let autoSpin = true;       // 자동 회전 여부
-let showInfo = true;       // 정보 표시 여부
-let mouseInteraction = true; // 마우스 인터랙션 허용 여부
-let pulseEffect = true;    // 펄스 효과 여부
-let colorMode = 0;         // 색상 모드 (0: 무지개, 1: 단일 색상, 2: 흑백)
+// [1] 전역 변수 설정
+let balls = [];           // 공 배열
+let gridSize = 10;        // 격자 간격
+let counts = [];          // 각 열별 공 개수
+let maxBalls = 2000;      // 생성할 공 개수 제한
+let deadBalls = [];       // 제거될 공들
 
-// 만다라 레이어 설정
-let layerConfigs = [];     // 레이어 구성
+// 보드와 영역 설정
+let boardWidth = 600;
+let boardHeight = 800;
+let topRegionHeight = 600; // 핀(위쪽) 영역의 높이
 
 function setup() {
-    createCanvas(800, 600);
-    
-    // 레이어 구성 초기화
-    initializeLayerConfigs();
-    
-    // 매끄러운 렌더링을 위한 설정
-    smooth();
-    
-    // 색상 모드 설정
-    colorMode = HSB, 360, 100, 100, 1;
-}
-
-function initializeLayerConfigs() {
-    layerConfigs = [];
-    
-    // 각 레이어별 설정 생성
-    for (let i = 0; i < layers; i++) {
-        let radius = map(i, 0, layers - 1, maxRadius * 0.1, maxRadius);
-        let segmentCount = floor(segments * (i + 1) / layers) * symmetry;
-        if (segmentCount < symmetry) segmentCount = symmetry;
-        
-        layerConfigs.push({
-            radius: radius,
-            segmentCount: segmentCount,
-            rotation: random(TWO_PI),
-            rotationSpeed: random(-0.02, 0.02),
-            amplitude: random(0.1, 0.5) * detail,
-            frequency: floor(random(2, 8)),
-            thickness: map(i, 0, layers - 1, 15, 2)
-        });
-    }
+  createCanvas(boardWidth, boardHeight);
+  
+  // gridSize와 boardWidth로 컬럼 개수를 계산
+  // (아래는 Python으로 계산한 예시)
+  // >>> Python 코드 예:
+  // >>> boardWidth = 600
+  // >>> gridSize = 10
+  // >>> columns = boardWidth // gridSize - 1
+  // >>> print(columns)  # 59
+  
+  for (let i = 0; i < boardWidth / gridSize - 1; i++) {
+    counts[i] = 0;
+  }
 }
 
 function draw() {
-    // 배경 그리기 (어두운 색상)
-    background(230, 50, 10);
-    
-    // 시간 업데이트
-    t += 0.01;
-    
-    // 중앙 정렬
-    translate(width / 2, height / 2);
-    
-    // 자동 회전
-    if (autoSpin) {
-        rotate(t * rotationSpeed);
+  background(237, 221, 183);
+  
+  // 전체 보드(핀 영역 + 수집통 영역) 그리기
+  displayBoard();
+  
+  // 새로운 공 생성
+  if (frameCount < maxBalls * 2 && frameCount % 2 === 0) {
+    balls.push(new Ball());
+  }
+  
+  // 공 이동·표시
+  for (let ball of balls) {
+    ball.move();
+    ball.display();
+  }
+  
+  // 수집통 막대 표시
+  displayBars();
+  
+  // 제거할 공 제거
+  for (let ball of deadBalls) {
+    let idx = balls.indexOf(ball);
+    if (idx !== -1) {
+      balls.splice(idx, 1);
     }
-    
-    // 마우스 인터랙션
-    if (mouseInteraction && mouseIsPressed) {
-        // 마우스 위치에 따라 만다라 변형
-        let mouseAngle = atan2(mouseY - height/2, mouseX - width/2);
-        let mouseDist = dist(mouseX, mouseY, width/2, height/2);
-        let mouseInfluence = constrain(map(mouseDist, 0, 200, 0, 1), 0, 1);
-        
-        rotate(mouseAngle * mouseInfluence * 0.2);
-        scale(1 + mouseInfluence * 0.1 * sin(t));
-    }
-    
-    // 레이어 순서대로 그리기 (안쪽부터 바깥쪽으로)
-    for (let i = 0; i < layers; i++) {
-        drawMandalaLayer(i);
-    }
-    
-    // 2D 레이어에 UI 그리기
-    drawUI();
-    
-    // 색상 오프셋 업데이트
-    if (colorMode === 0) {  // 무지개 모드일 때만 색상 순환
-        colorOffset = (colorOffset + 0.5) % 360;
-    }
+  }
+  deadBalls = [];
 }
 
-function drawMandalaLayer(layerIndex) {
-    let config = layerConfigs[layerIndex];
-    let radius = config.radius;
+// -------------------------
+// 보드 그리기
+// -------------------------
+function displayBoard() {
+  push();
+  noStroke();
+  fill(100);
+  
+  // [A] 핀(격자 점) 표시: y=0 ~ topRegionHeight(600)까지만
+  for (let x = 0; x <= width; x += gridSize) {
+    for (let y = gridSize; y < topRegionHeight; y += gridSize) {
+      // 짝수 행에서는 약간 왼쪽으로 핀을 이동 (지그재그 느낌)
+      let xo = (y % (gridSize * 2) === 0) ? x - gridSize / 2 : x;
+      circle(xo, y, 2);
+    }
+  }
+  
+  // [B] 수집통 구분선: y=topRegionHeight ~ height
+  stroke(100);
+  for (let x = gridSize / 2; x < width; x += gridSize) {
+    line(x, topRegionHeight, x, height);
+  }
+  
+  pop();
+}
+
+// -------------------------
+// 막대 그래프(수집통) 표시
+// -------------------------
+function displayBars() {
+  push();
+  strokeCap(ROUND);
+  stroke('blue');
+  strokeWeight(gridSize / 3 + 1);
+  
+  // 수집통 영역: y=600 ~ 800
+  //   - 바닥(y=800)에서 위로 쌓이도록 line()을 그림
+  for (let i = 0; i < counts.length; i++) {
+    let x = (i + 1) * gridSize;
     
-    // 펄스 효과
-    if (pulseEffect) {
-        radius += sin(t * 2 + layerIndex * 0.5) * 10 * detail;
+    // 누적된 공 개수에 따라 높이 증가
+    let barHeight = counts[i] / 2;  // 기존 코드와 동일(2로 나눔)
+    let topY = height - barHeight;  // 바닥에서 barHeight만큼 위로
+    
+    line(x, height, x, topY);
+  }
+  
+  pop();
+}
+
+// -------------------------
+// Ball 클래스
+// -------------------------
+class Ball {
+  constructor() {
+    // 공은 위에서 시작
+    this.x = width / 2;
+    this.y = 0;
+    this.jig = true; // 핀 영역에서만 좌우로 흔들리는 플래그
+  }
+
+  move() {
+    // 아래로 이동
+    this.y += gridSize / 2;
+    
+    // [1] 핀 영역(위쪽)에서의 '흔들림' 처리
+    if (this.jig) {
+      // gridSize 간격마다 좌우로 random 이동
+      if (this.y % gridSize === 0) {
+        this.x += random([-gridSize / 2, gridSize / 2]);
+      }
     }
     
+    // [2] y가 topRegionHeight(=600) 넘어가면 흔들림 중지
+    //     → 수집통 영역에서는 straight down
+    if (this.y > topRegionHeight) {
+      this.jig = false;
+      
+      // [3] 바닥에 닿았는지 체크
+      let column = int((this.x - gridSize / 2) / gridSize);
+      
+      // counts[column]만큼 이미 쌓여 있으면, 그 위에서 정지
+      if (this.y >= height - counts[column] / 2) {
+        deadBalls.push(this);
+        counts[column] += 1;
+      }
+    }
+  }
+  
+  display() {
     push();
-    // 각 레이어마다 다른 회전
-    rotate(config.rotation + t * config.rotationSpeed);
-    
-    // 특정 레이어일 때 반전 회전
-    if (layerIndex % 2 === 1) {
-        rotate(t * -config.rotationSpeed * 2);
-    }
-    
-    // 세그먼트 그리기
-    for (let j = 0; j < config.segmentCount; j++) {
-        let angle = TWO_PI * j / config.segmentCount;
-        let nextAngle = TWO_PI * (j + 1) / config.segmentCount;
-        
-        // 색상 설정
-        let hue, saturation, brightness;
-        
-        if (colorMode === 0) {
-            // 무지개 모드
-            hue = (colorOffset + map(j, 0, config.segmentCount, 0, 360)) % 360;
-            saturation = 70 + 30 * sin(t + layerIndex);
-            brightness = 90;
-        } else if (colorMode === 1) {
-            // 단일 색상 모드 (파란색/보라색 그라데이션)
-            hue = 270; // 보라색 베이스
-            saturation = 60 + 40 * (layerIndex / layers);
-            brightness = 100 - 20 * (layerIndex / layers);
-        } else {
-            // 흑백 모드
-            hue = 0;
-            saturation = 0;
-            brightness = 50 + 40 * sin(t + j * 0.1 + layerIndex * 0.5);
-        }
-        
-        fill(hue, saturation, brightness, 0.7);
-        
-        // 윤곽선 설정
-        if (layerIndex === 0 || layerIndex === layers - 1) {
-            strokeWeight(2);
-            stroke(hue, saturation, brightness - 30);
-        } else {
-            noStroke();
-        }
-        
-        // 세그먼트 모양 그리기
-        beginShape();
-        
-        // 원의 내부 점
-        let innerRadius = radius * 0.6;
-        let midRadius = radius * 0.8;
-        
-        // 파형 적용
-        let wave1 = sin(angle * config.frequency + t) * config.amplitude;
-        let wave2 = sin(nextAngle * config.frequency + t) * config.amplitude;
-        
-        // 내부 점
-        vertex(cos(angle) * innerRadius * (1 + wave1), sin(angle) * innerRadius * (1 + wave1));
-        
-        // 중간 제어점
-        let ctrlAngle = (angle + nextAngle) / 2;
-        let ctrlRadius = midRadius * (1 + (wave1 + wave2) / 2);
-        
-        // 베지어 곡선으로 부드러운 형태 만들기
-        bezierVertex(
-            cos(ctrlAngle) * (ctrlRadius + config.thickness), 
-            sin(ctrlAngle) * (ctrlRadius + config.thickness),
-            cos(ctrlAngle) * (ctrlRadius + config.thickness), 
-            sin(ctrlAngle) * (ctrlRadius + config.thickness),
-            cos(nextAngle) * innerRadius * (1 + wave2), 
-            sin(nextAngle) * innerRadius * (1 + wave2)
-        );
-        
-        // 외부 점
-        vertex(cos(nextAngle) * radius * (1 + wave2), sin(nextAngle) * radius * (1 + wave2));
-        
-        // 외부 제어점
-        bezierVertex(
-            cos(ctrlAngle) * (radius + config.thickness), 
-            sin(ctrlAngle) * (radius + config.thickness),
-            cos(ctrlAngle) * (radius + config.thickness), 
-            sin(ctrlAngle) * (radius + config.thickness),
-            cos(angle) * radius * (1 + wave1), 
-            sin(angle) * radius * (1 + wave1)
-        );
-        
-        endShape(CLOSE);
-    }
-    
+    noStroke();
+    fill("blue");
+    circle(this.x, this.y, gridSize / 3 + 1);
     pop();
+  }
 }
-
-function drawUI() {
-    push();
-    // 다시 원점으로 리셋
-    resetMatrix();
-    
-    if (showInfo) {
-        // 왼쪽 상단 정보 패널
-        fill(230, 20, 90, 0.7);
-        rect(20, 20, 200, 180, 10);
-        
-        fill(0);
-        textSize(16);
-        text("만다라 패턴 생성기", 30, 40);
-        text("레이어 수: " + layers, 30, 65);
-        text("대칭 수: " + symmetry, 30, 90);
-        text("세그먼트 수: " + segments, 30, 115);
-        text("상세도: " + nf(detail, 1, 1), 30, 140);
-        text("색상 모드: " + ["무지개", "그라데이션", "흑백"][colorMode], 30, 165);
-        text("FPS: " + nf(frameRate(), 1, 1), 30, 190);
-    }
-    
-    // 조작 방법 안내
-    fill(230, 20, 90, 0.7);
-    rect(580, 10, 190, 160, 10);
-    fill(0);
-    textSize(14);
-    text("조작 방법:", 590, 30);
-    text("'s' 키: 자동 회전 켜기/끄기", 590, 50);
-    text("'i' 키: 정보 표시/숨기기", 590, 70);
-    text("'m' 키: 마우스 인터랙션 켜기/끄기", 590, 90);
-    text("'p' 키: 펄스 효과 켜기/끄기", 590, 110);
-    text("'c' 키: 색상 모드 변경", 590, 130);
-    text("'r' 키: 새 패턴 생성", 590, 150);
-    
-    pop();
-}
-
-function keyPressed() {
-    if (key === 's' || key === 'S') {
-        autoSpin = !autoSpin;
-    } else if (key === 'i' || key === 'I') {
-        showInfo = !showInfo;
-    } else if (key === 'm' || key === 'M') {
-        mouseInteraction = !mouseInteraction;
-    } else if (key === 'p' || key === 'P') {
-        pulseEffect = !pulseEffect;
-    } else if (key === 'c' || key === 'C') {
-        colorMode = (colorMode + 1) % 3;
-    } else if (key === 'r' || key === 'R') {
-        // 새로운 패턴 생성
-        initializeLayerConfigs();
-    } else if (key === '+' || keyCode === UP_ARROW) {
-        // 복잡도 증가
-        detail = constrain(detail + 0.1, 0.1, 1.0);
-        initializeLayerConfigs();
-    } else if (key === '-' || keyCode === DOWN_ARROW) {
-        // 복잡도 감소
-        detail = constrain(detail - 0.1, 0.1, 1.0);
-        initializeLayerConfigs();
-    } else if (keyCode === LEFT_ARROW) {
-        // 대칭 감소
-        symmetry = max(3, symmetry - 1);
-        initializeLayerConfigs();
-    } else if (keyCode === RIGHT_ARROW) {
-        // 대칭 증가
-        symmetry = min(16, symmetry + 1);
-        initializeLayerConfigs();
-    }
-}
-
-function mousePressed() {
-    return false;
-}
-
-function mouseReleased() {
-    // 마우스 놓기 처리
-} 

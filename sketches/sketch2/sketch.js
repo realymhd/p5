@@ -15,8 +15,8 @@ let starPositions = [];  // 배경 별 위치
 let starColors = [];     // 별 색상
 
 let showOrbits = true;   // 공전 궤도 표시 여부
-let showInfo = true;     // 정보 표시 여부
-let viewMode = 0;        // 0: 전체 시스템, 1: 지구 관점, 2: 달 관점
+let isFirstFrame = true;
+let zoom = 1.0;          // 줌 레벨
 
 function setup() {
     createCanvas(800, 600, WEBGL);
@@ -58,8 +58,17 @@ function draw() {
     // 시간 업데이트
     time += 0.005;
     
-    // 관점 설정
-    setupCamera();
+    // 초기 카메라 위치 설정 (위에서 45도 각도로 내려다보기)
+    if (isFirstFrame) {
+        camera(0, -300, 500, 0, 0, 0, 0, 1, 0); 
+        isFirstFrame = false;
+    }
+
+    // 마우스로 3D 회전 제어 추가
+    orbitControl();
+    
+    // 줌 적용
+    scale(zoom);
     
     // 배경 별 그리기
     drawStars();
@@ -67,27 +76,8 @@ function draw() {
     // 태양계 그리기
     drawSolarSystem();
     
-    // 2D 레이어에 UI 그리기
+    // 빈 UI 함수 - 이걸 유지해야 마우스 드래그가 작동함
     drawUI();
-}
-
-function setupCamera() {
-    // 시점 설정
-    switch(viewMode) {
-        case 0: // 전체 시스템 뷰
-            camera(0, -300, 500, 0, 0, 0, 0, 1, 0);
-            break;
-        case 1: // 지구 관점
-            let earthX = sin(earthRotation) * earthOrbitRadius;
-            let earthZ = cos(earthRotation) * earthOrbitRadius;
-            camera(earthX, 0, earthZ, 0, 0, 0, 0, 1, 0);
-            break;
-        case 2: // 달 관점
-            let moonX = sin(earthRotation) * earthOrbitRadius + sin(moonRotation) * moonOrbitRadius;
-            let moonZ = cos(earthRotation) * earthOrbitRadius + cos(moonRotation) * moonOrbitRadius;
-            camera(moonX, 0, moonZ, 0, 0, 0, 0, 1, 0);
-            break;
-    }
 }
 
 function drawStars() {
@@ -187,45 +177,16 @@ function drawSolarSystem() {
 }
 
 function drawUI() {
-    // WebGL에서는 일반적인 2D 그리기를 위해 resetMatrix 사용
-    push();
-    resetMatrix();
-    
-    // 왼쪽 상단 정보 패널
-    if (showInfo) {
-        fill(0, 0, 30, 200);
-        rect(20, 20, 300, 170, 5);
-        
-        fill(255);
-        textSize(16);
-        text("행성계 시뮬레이션", 30, 40);
-        text("태양 반지름: " + sunRadius + " 단위", 30, 65);
-        text("지구 공전 반경: " + earthOrbitRadius + " 단위", 30, 90);
-        text("지구 반지름: " + earthRadius + " 단위", 30, 115);
-        text("달 공전 반경: " + moonOrbitRadius + " 단위", 30, 140);
-        text("달 반지름: " + moonRadius + " 단위", 30, 165);
-    }
-    
-    // 조작 방법 안내
-    fill(0, 0, 30, 200);
-    rect(580, 10, 190, 130, 5);
-    fill(255);
-    textSize(14);
-    text("조작 방법:", 590, 30);
-    text("'v' 키: 관점 변경", 590, 50);
-    text("'o' 키: 궤도 표시/숨기기", 590, 70);
-    text("'i' 키: 정보 표시/숨기기", 590, 90);
-    text("현재 관점: " + ["전체", "지구", "달"][viewMode], 590, 120);
-    
-    pop();
 }
 
-function keyPressed() {
-    if (key === 'o' || key === 'O') {
-        showOrbits = !showOrbits;
-    } else if (key === 'i' || key === 'I') {
-        showInfo = !showInfo;
-    } else if (key === 'v' || key === 'V') {
-        viewMode = (viewMode + 1) % 3;
-    }
-} 
+// 마우스 휠 이벤트 처리
+function mouseWheel(event) {
+    // 음수면 줌인, 양수면 줌아웃
+    zoom += event.delta * -0.001;
+    
+    // 줌 레벨 제한
+    zoom = constrain(zoom, 0.1, 5.0);
+    
+    // 기본 스크롤 동작 방지
+    return false;
+}
