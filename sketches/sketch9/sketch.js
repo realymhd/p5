@@ -1,348 +1,192 @@
-// // Sketch variables
-// let particles = [];         // 입자 배열
-// let numParticles = 50;      // 입자 개수
-// let gravity = 0.1;          // 중력 가속도
-// let friction = 0.99;        // 마찰 계수
-// let windForce = 0;          // 바람 힘
-// let showVectors = true;     // 벡터 표시 여부
-// let showTrails = false;     // 궤적 표시 여부
-// let showInfo = true;        // 정보 표시 여부
-// let showControls = true;    // 컨트롤 표시 여부
-// let attractionMode = false; // 마우스 인력 모드
-// let repulsionMode = false;  // 마우스 척력 모드
-// let trailsCanvas;           // 궤적을 그릴 캔버스
+// sketch11/sketch.js - 푸리에 에피사이클 (루프 및 페이드아웃)
 
-// // 물리 상수
-// let elasticity = 0.7;       // 탄성 계수 (0-1)
-// let mouseForceStrength = 5; // 마우스 힘 세기
-// let colorMode = 0;          // 색상 모드 (0: 속도, 1: 크기, 2: 무작위)
+let font;
+let points = [];
+let fourierCoefficients = [];
+let time = 0;
+let path = []; // 최종 경로
+let drawingText = "MATAMATH";
+let fontSize = 150;
+let sampleFactor = 0.25;
+let pathColor; // 노란색 (setup에서 설정)
+let center;
 
-// // Particle 클래스
-// class Particle {
-//     constructor() {
-//         this.mass = random(5, 15);
-//         this.position = createVector(random(width), random(height));
-//         this.velocity = createVector(random(-2, 2), random(-2, 2));
-//         this.acceleration = createVector(0, 0);
-//         this.color = color(random(100, 255), random(100, 255), random(100, 255), 200);
-//         this.trails = [];   // 궤적 저장
-//         this.maxTrails = 30; // 최대 궤적 길이
-//     }
-    
-//     applyForce(force) {
-//         // F = ma, a = F/m
-//         let f = p5.Vector.div(force, this.mass);
-//         this.acceleration.add(f);
-//     }
-    
-//     update() {
-//         // 속도 업데이트 (v = v + a)
-//         this.velocity.add(this.acceleration);
-        
-//         // 마찰력 적용
-//         this.velocity.mult(friction);
-        
-//         // 궤적 저장
-//         if (showTrails) {
-//             this.trails.push(createVector(this.position.x, this.position.y));
-//             if (this.trails.length > this.maxTrails) {
-//                 this.trails.shift(); // 가장 오래된 위치 제거
-//             }
-//         } else {
-//             this.trails = []; // 궤적 비우기
-//         }
-        
-//         // 위치 업데이트 (x = x + v)
-//         this.position.add(this.velocity);
-        
-//         // 가속도 초기화 (매 프레임마다 새로 계산)
-//         this.acceleration.mult(0);
-        
-//         // 경계 확인 및 반사
-//         this.checkEdges();
-//     }
-    
-//     checkEdges() {
-//         // 경계 벽과 충돌 시 반사
-//         if (this.position.x > width - this.mass) {
-//             this.position.x = width - this.mass;
-//             this.velocity.x *= -elasticity;
-//         } else if (this.position.x < this.mass) {
-//             this.position.x = this.mass;
-//             this.velocity.x *= -elasticity;
-//         }
-        
-//         if (this.position.y > height - this.mass) {
-//             this.position.y = height - this.mass;
-//             this.velocity.y *= -elasticity;
-//         } else if (this.position.y < this.mass) {
-//             this.position.y = this.mass;
-//             this.velocity.y *= -elasticity;
-//         }
-//     }
-    
-//     display() {
-//         // 궤적 그리기
-//         if (showTrails && this.trails.length > 1) {
-//             let prevAlpha = 150;
-//             trailsCanvas.stroke(red(this.color), green(this.color), blue(this.color), prevAlpha);
-//             trailsCanvas.strokeWeight(this.mass * 0.5);
-            
-//             for (let i = 0; i < this.trails.length - 1; i++) {
-//                 let alpha = map(i, 0, this.trails.length - 1, 20, 150);
-//                 trailsCanvas.stroke(red(this.color), green(this.color), blue(this.color), alpha);
-//                 trailsCanvas.line(this.trails[i].x, this.trails[i].y, 
-//                              this.trails[i + 1].x, this.trails[i + 1].y);
-//             }
-//         }
-        
-//         // 입자 색상 (색상 모드에 따라)
-//         let particleColor;
-        
-//         if (colorMode === 0) {
-//             // 속도에 따른 색상
-//             let speed = this.velocity.mag();
-//             let mappedSpeed = map(speed, 0, 10, 0, 255);
-//             particleColor = color(mappedSpeed, 100, 255 - mappedSpeed, 200);
-//         } else if (colorMode === 1) {
-//             // 크기에 따른 색상
-//             let massColor = map(this.mass, 5, 15, 0, 255);
-//             particleColor = color(100, massColor, 255 - massColor, 200);
-//         } else {
-//             // 기본 색상 사용
-//             particleColor = this.color;
-//         }
-        
-//         // 입자 그리기
-//         fill(particleColor);
-//         strokeWeight(1);
-//         stroke(50, 200);
-//         ellipse(this.position.x, this.position.y, this.mass * 2, this.mass * 2);
-        
-//         // 속도 벡터 표시
-//         if (showVectors) {
-//             this.displayVectors();
-//         }
-//     }
-    
-//     displayVectors() {
-//         // 속도 벡터 (빨간색)
-//         push();
-//         stroke(255, 0, 0, 200);
-//         strokeWeight(2);
-//         let velocityVector = p5.Vector.mult(this.velocity, 5);
-//         line(this.position.x, this.position.y, 
-//              this.position.x + velocityVector.x, 
-//              this.position.y + velocityVector.y);
-//         // 화살표 그리기
-//         let arrowSize = 6;
-//         let angle = velocityVector.heading();
-//         translate(this.position.x + velocityVector.x, this.position.y + velocityVector.y);
-//         rotate(angle);
-//         triangle(0, 0, -arrowSize, arrowSize/2, -arrowSize, -arrowSize/2);
-//         pop();
-//     }
-// }
+// --- 상태 및 타이머 변수 ---
+let appState = 'DRAWING'; // 'DRAWING', 'PAUSED', 'FADING_OUT'
+let pauseDuration = 10000; // 10초 (밀리초 단위)
+let fadeDuration = 1000;   // 1초 페이드아웃
+let pauseStartTime = 0;
+let fadeStartTime = 0;
+let currentAlpha = 255; // 현재 경로 투명도
 
-// function setup() {
-//     createCanvas(800, 600);
-    
-//     // 궤적을 그릴 별도의 캔버스 생성
-//     trailsCanvas = createGraphics(width, height);
-//     trailsCanvas.clear();
-    
-//     // 입자 생성
-//     for (let i = 0; i < numParticles; i++) {
-//         particles.push(new Particle());
-//     }
-// }
+// --- DFT 함수 (이전과 동일) ---
+function dftComplex(complexPoints) { /* ... 이전 코드 ... */
+    const N = complexPoints.length; if (N === 0) return []; const coefficients = [];
+    for (let k = 0; k < N; k++) { let sum_re = 0; let sum_im = 0;
+        for (let n = 0; n < N; n++) { const phi = (TWO_PI * k * n) / N; const cosPhi = cos(phi); const sinPhi = sin(phi); sum_re += complexPoints[n].x * cosPhi + complexPoints[n].y * sinPhi; sum_im += complexPoints[n].y * cosPhi - complexPoints[n].x * sinPhi; }
+        let re = sum_re / N; let im = sum_im / N; let freq = k; let amp = sqrt(re * re + im * im); let phase = atan2(im, re);
+        if (isNaN(re) || isNaN(im) || isNaN(amp) || isNaN(phase)) { re = 0; im = 0; amp = 0; phase = 0; }
+        coefficients[k] = { re, im, freq, amp, phase };
+    } return coefficients;
+}
 
-// function draw() {
-//     background(240);
-    
-//     // 궤적 캔버스 표시
-//     if (showTrails) {
-//         image(trailsCanvas, 0, 0);
-        
-//         // 특정 프레임마다 희미하게 만들기
-//         if (frameCount % 5 === 0) {
-//             trailsCanvas.fill(240, 30);
-//             trailsCanvas.noStroke();
-//             trailsCanvas.rect(0, 0, width, height);
-//         }
-//     } else {
-//         trailsCanvas.clear();
-//     }
-    
-//     // 마우스 위치에 따른 힘 적용
-//     applyMouseForce();
-    
-//     // 물리 시뮬레이션 적용 및 입자 그리기
-//     for (let particle of particles) {
-//         // 중력 적용
-//         let gravity_force = createVector(0, gravity * particle.mass);
-//         particle.applyForce(gravity_force);
-        
-//         // 바람 적용
-//         let wind = createVector(windForce, 0);
-//         particle.applyForce(wind);
-        
-//         // 물리 업데이트
-//         particle.update();
-        
-//         // 입자 그리기
-//         particle.display();
-//     }
-    
-//     // UI 그리기
-//     drawUI();
-// }
+// --- p5.js 함수 ---
+function preload() {
+    try {
+        font = loadFont('NanumGothic.ttf'); // <<-- 실제 폰트 경로!
+    } catch (error) { console.error("loadFont 에러:", error); font = undefined; }
+}
 
-// function applyMouseForce() {
-//     if (mouseIsPressed && (attractionMode || repulsionMode)) {
-//         let mousePos = createVector(mouseX, mouseY);
-        
-//         for (let particle of particles) {
-//             // 마우스와 입자 사이의 방향 벡터
-//             let direction = p5.Vector.sub(mousePos, particle.position);
-//             let distance = direction.mag();
-            
-//             // 최소 거리 제한 (0으로 나누기 방지)
-//             if (distance < 5) distance = 5;
-            
-//             // 거리 제곱에 반비례하는 힘
-//             let strength = mouseForceStrength / (distance * 0.5);
-//             direction.normalize();
-//             direction.mult(strength);
-            
-//             // 척력 모드면 방향 반전
-//             if (repulsionMode) {
-//                 direction.mult(-1);
-//             }
-            
-//             // 힘 적용
-//             particle.applyForce(direction);
-            
-//             // 힘 벡터 표시
-//             if (showVectors) {
-//                 push();
-//                 stroke(0, 0, 255, 150);
-//                 strokeWeight(1);
-//                 line(particle.position.x, particle.position.y, 
-//                      particle.position.x + direction.x * 50, 
-//                      particle.position.y + direction.y * 50);
-//                 pop();
-//             }
-//         }
-//     }
-// }
+function setup() {
+    createCanvas(windowWidth, windowHeight);
+    center = createVector(width / 2, height / 2);
+    angleMode(RADIANS);
+    pathColor = color(255, 255, 0); // 노란색
 
-// function drawUI() {
-//     // 물리 변수 정보 패널
-//     if (showInfo) {
-//         push();
-//         fill(255, 255, 255, 200);
-//         rect(20, 20, 220, 150, 5);
-        
-//         fill(0);
-//         textSize(16);
-//         text("물리 시뮬레이션", 30, 40);
-//         text("입자 수: " + numParticles, 30, 65);
-//         text("중력: " + nf(gravity, 1, 2), 30, 90);
-//         text("마찰 계수: " + nf(friction, 1, 3), 30, 115);
-//         text("바람 세기: " + nf(windForce, 1, 2), 30, 140);
-//         text("탄성 계수: " + nf(elasticity, 1, 2), 30, 165);
-//         pop();
-//     }
-    
-//     // 조작 방법 안내
-//     if (showControls) {
-//         push();
-//         fill(30, 30, 30, 200);
-//         rect(width - 230, 10, 220, 200, 5);
-        
-//         fill(255);
-//         textSize(14);
-//         text("조작 방법:", width - 220, 30);
-//         text("'v' 키: 벡터 표시/숨기기", width - 220, 50);
-//         text("'t' 키: 궤적 표시/숨기기", width - 220, 70);
-//         text("'i' 키: 정보 표시/숨기기", width - 220, 90);
-//         text("'r' 키: 초기화", width - 220, 110);
-//         text("'g' 키: 중력 켜기/끄기", width - 220, 130);
-//         text("'c' 키: 색상 모드 변경", width - 220, 150);
-//         text("'a' 키: 인력 모드 토글", width - 220, 170);
-//         text("'s' 키: 척력 모드 토글", width - 220, 190);
-//         text("마우스 휠: 바람 세기 조절", width - 220, 210);
-//         pop();
-//     }
-    
-//     // 현재 모드 표시
-//     push();
-//     textSize(14);
-//     textAlign(CENTER);
-//     if (attractionMode) {
-//         fill(0, 0, 255, 200);
-//         text("인력 모드", width/2, height - 20);
-//     } else if (repulsionMode) {
-//         fill(255, 0, 0, 200);
-//         text("척력 모드", width/2, height - 20);
-//     }
-//     pop();
-// }
+    if (!font) { textFont('sans-serif'); } else { textFont(font); }
+    textSize(fontSize);
 
-// function mouseWheel(event) {
-//     // 마우스 휠로 바람 세기 조절
-//     windForce += event.delta * 0.01;
-//     windForce = constrain(windForce, -2, 2);
-//     return false;
-// }
+    // 1. 텍스트 포인트 생성
+    let textPointsRaw = [];
+    if (font && typeof font.textToPoints === 'function') {
+        try {
+            let bounds = font.textBounds(drawingText, 0, 0, fontSize);
+            let startX = center.x - bounds.w / 2;
+            let startY = center.y + bounds.h / 2;
+            textPointsRaw = font.textToPoints(drawingText, startX, startY, fontSize, { sampleFactor: sampleFactor });
+        } catch (error) { console.error("font.textToPoints 오류:", error); }
+    }
+    if (textPointsRaw.length === 0) { /* 대체 경로 (원) */
+        console.warn("텍스트 포인트 생성 실패. 대체 원 사용.");
+        let radius = 100; for (let a = 0; a < TWO_PI; a += 0.1) points.push({x: radius*cos(a), y: radius*sin(a)});
+    } else { /* 포인트 변환 */
+        console.log(`${textPointsRaw.length}개 텍스트 포인트 생성.`);
+        for(let i=0; i<textPointsRaw.length; i++) points.push({x:textPointsRaw[i].x-center.x, y:textPointsRaw[i].y-center.y});
+    }
 
-// function keyPressed() {
-//     if (key === 'v' || key === 'V') {
-//         showVectors = !showVectors;
-//     } else if (key === 't' || key === 'T') {
-//         showTrails = !showTrails;
-//         trailsCanvas.clear();
-//     } else if (key === 'i' || key === 'I') {
-//         showInfo = !showInfo;
-//     } else if (key === 'h' || key === 'H') {
-//         showControls = !showControls;
-//     } else if (key === 'r' || key === 'R') {
-//         // 리셋
-//         particles = [];
-//         for (let i = 0; i < numParticles; i++) {
-//             particles.push(new Particle());
-//         }
-//         trailsCanvas.clear();
-//     } else if (key === 'g' || key === 'G') {
-//         // 중력 토글
-//         gravity = gravity === 0 ? 0.1 : 0;
-//     } else if (key === 'c' || key === 'C') {
-//         // 색상 모드 변경
-//         colorMode = (colorMode + 1) % 3;
-//     } else if (key === 'a' || key === 'A') {
-//         // 인력 모드 토글
-//         attractionMode = !attractionMode;
-//         if (attractionMode) repulsionMode = false;
-//     } else if (key === 's' || key === 'S') {
-//         // 척력 모드 토글
-//         repulsionMode = !repulsionMode;
-//         if (repulsionMode) attractionMode = false;
-//     } else if (key === '+' || key === '=') {
-//         // 입자 수 증가
-//         for (let i = 0; i < 5; i++) {
-//             if (particles.length < 200) {
-//                 particles.push(new Particle());
-//                 numParticles++;
-//             }
-//         }
-//     } else if (key === '-' || key === '_') {
-//         // 입자 수 감소
-//         for (let i = 0; i < 5; i++) {
-//             if (particles.length > 5) {
-//                 particles.pop();
-//                 numParticles--;
-//             }
-//         }
-//     }
-// } 
+    // 2. DFT 수행 및 정렬
+    fourierCoefficients = dftComplex(points);
+    if (fourierCoefficients.length > 0) fourierCoefficients.sort((a, b) => b.amp - a.amp);
+    else fourierCoefficients.push({ re: 0, im: 0, freq: 0, amp: 0, phase: 0 });
+
+    // 3. 초기화
+    resetAnimation(); // 상태, 시간, 경로 초기화
+    console.log("Setup 완료. 애니메이션 시작.");
+}
+
+function draw() {
+    background(0);
+
+    // --- 상태별 로직 처리 ---
+    if (appState === 'DRAWING') {
+        drawDrawingState();
+    } else if (appState === 'PAUSED') {
+        drawPausedState();
+    } else if (appState === 'FADING_OUT') {
+        drawFadingState();
+    }
+}
+
+// DRAWING 상태 처리 및 그리기
+function drawDrawingState() {
+    // 1. 에피사이클 계산 및 그리기 -> 최종 위치 반환
+    let finalPos = calculateAndDrawEpicycles(center.x, center.y, fourierCoefficients);
+
+    // 2. 최종 위치를 경로에 추가
+    if (finalPos) { path.push(finalPos); }
+
+    // 3. 현재까지의 경로 그리기 (완전 불투명)
+    drawPath(255); // 알파값 255
+
+    // 4. 시간 업데이트
+    const N = fourierCoefficients.length;
+    const dt = TWO_PI / N;
+    time += dt;
+
+    // 5. 그리기 완료 체크
+    if (time >= TWO_PI) {
+        console.log("그리기 완료. PAUSED 상태 진입.");
+        appState = 'PAUSED';
+        pauseStartTime = millis(); // 일시정지 시작 시간 기록
+        time = TWO_PI; // 정확히 마지막 지점 그리도록 보정 (선택적)
+        // path에는 이미 완성된 경로가 들어있음
+    }
+}
+
+// PAUSED 상태 처리 및 그리기
+function drawPausedState() {
+    // 완성된 경로만 그리기 (에피사이클은 그리지 않음)
+    drawPath(255); // 완전 불투명
+
+    // 시간 체크
+    if (millis() - pauseStartTime > pauseDuration) {
+        console.log("10초 경과. FADING_OUT 상태 진입.");
+        appState = 'FADING_OUT';
+        fadeStartTime = millis(); // 페이드 시작 시간 기록
+        currentAlpha = 255; // 알파값 초기화
+    }
+}
+
+// FADING_OUT 상태 처리 및 그리기
+function drawFadingState() {
+    // 페이드 진행률 계산 (0 ~ 1)
+    let elapsedTime = millis() - fadeStartTime;
+    let fadeRatio = constrain(elapsedTime / fadeDuration, 0, 1);
+
+    // 알파값 계산 (255 -> 0)
+    currentAlpha = map(fadeRatio, 0, 1, 255, 0);
+
+    // 계산된 알파값으로 경로 그리기
+    drawPath(currentAlpha);
+
+    // 페이드 완료 체크
+    if (fadeRatio >= 1 || currentAlpha <= 0) {
+        console.log("페이드 아웃 완료. 애니메이션 리셋.");
+        resetAnimation(); // 리셋 후 다음 프레임부터 DRAWING 시작
+    }
+}
+
+// 에피사이클 계산 및 그리기 함수 (DRAWING 상태에서만 호출됨)
+function calculateAndDrawEpicycles(startX, startY, coefficients) {
+    let currentX = startX; let currentY = startY;
+    if (!coefficients || coefficients.length === 0) return createVector(startX, startY);
+    for (let i = 0; i < coefficients.length; i++) { /* ... 에피사이클 계산 및 그리기 (이전과 동일) ... */
+         let prevX = currentX; let prevY = currentY;
+         let freq = coefficients[i].freq || 0; let radius = coefficients[i].amp || 0; let phase = coefficients[i].phase || 0;
+         let angle = freq * time + phase;
+         currentX += radius * cos(angle); currentY += radius * sin(angle);
+         if (isNaN(currentX) || isNaN(currentY)) { currentX = prevX; currentY = prevY; continue; }
+         stroke(255, 100); noFill(); strokeWeight(1);
+         ellipse(prevX, prevY, radius * 2); line(prevX, prevY, currentX, currentY);
+    } return createVector(currentX, currentY);
+}
+
+// 경로를 그리는 함수 (알파값 조절 가능)
+function drawPath(alphaValue) {
+    if (path.length > 1) { // 점이 2개 이상 있어야 선을 그림
+        beginShape();
+        // stroke() 함수는 RGB와 Alpha를 함께 받음
+        stroke(red(pathColor), green(pathColor), blue(pathColor), alphaValue);
+        noFill();
+        strokeWeight(2);
+        for (let p of path) {
+            vertex(p.x, p.y);
+        }
+        endShape();
+    }
+     // 마지막 점 강조 (선택적) - 페이드 아웃 시에는 안보이게 할 수도 있음
+     if (path.length > 0 && alphaValue > 10) {
+         let lastP = path[path.length - 1];
+         fill(red(pathColor), green(pathColor), blue(pathColor), alphaValue);
+         noStroke();
+         ellipse(lastP.x, lastP.y, 8, 8);
+     }
+}
+
+// 애니메이션 상태를 초기화하는 함수
+function resetAnimation() {
+    appState = 'DRAWING';
+    time = 0;
+    path = []; // 경로 초기화
+    currentAlpha = 255;
+}

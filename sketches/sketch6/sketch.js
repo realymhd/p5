@@ -1,283 +1,162 @@
-let mirrors = [];
-let photons = [];
-let maxPhotons = 15; // Reduced number for cleaner visualization
-let traces = [];
+// sketches/sketch6/sketch.js
+// 로렌츠 끌개 (Lorenz Attractor) 시각화 - Orbit + Tilt 카메라 제어
+
+// --- 로렌츠 시스템 변수 ---
+let x = 0.1;
+let y = 0;
+let z = 0;
+let sigma = 10;
+let rho   = 28;
+let beta  = 8.0 / 3.0;
+let dt = 0.01;
+let points = [];
+let maxPoints = 2500;
+
+// --- 사용자 정의 카메라 변수 (구면 좌표계 기반) ---
+let camX, camY, camZ; // 카메라 위치 (계산 결과)
+let centerX = 0, centerY = 0, centerZ = 0; // 바라보는 지점 (고정)
+
+let distance;   // 카메라와 중심점 사이의 거리 (Zoom 제어)
+let angleH = 0; // 수평 각도 (Azimuth) - Orbit 제어 (Y축 기준 회전)
+let angleV = Math.PI / 6; // 수직 각도 (Elevation) - Tilt 제어 (XZ 평면 기준)
+
+// 드래그 상태 추적
 let isDragging = false;
-let draggedMirror = null;
-let dragOffset = { x: 0, y: 0 };
+let prevMouseX, prevMouseY;
+
+// 제어 감도
+let orbitSensitivity = 0.01; // 수평 회전 감도
+let tiltSensitivity = 0.01;  // 수직 회전 감도
+let zoomSensitivity = 0.5;   // 줌 감도 (거리 변화량)
+
+// --- 색상 관련 변수 ---
+let hueStart = 0;
 
 function setup() {
-  createCanvas(800, 600);
+  createCanvas(windowWidth, windowHeight * 0.9, WEBGL);
   colorMode(HSB, 360, 100, 100, 100);
-  
-  // Initialize mirrors
-  mirrors = [
-    { x1: 200, y1: 200, x2: 400, y2: 200 },
-    { x1: 600, y1: 200, x2: 700, y2: 300 },
-    { x1: 500, y1: 400, x2: 600, y2: 450 },
-    { x1: 200, y1: 500, x2: 400, y2: 450 },
-    { x1: 100, y1: 300, x2: 150, y2: 450 }
-  ];
-  
-  // Create initial photons
-  for (let i = 0; i < maxPhotons; i++) {
-    createPhoton();
-  }
+  points.push(createVector(x, y, z));
+
+  // --- 초기 카메라 설정 ---
+  distance = 500; // 초기 거리
+
+  // 초기 카메라 위치 계산
+  calculateCameraPosition();
+}
+
+// 현재 각도(angleH, angleV)와 거리(distance)를 바탕으로
+// 카메라 위치(camX,Y,Z) 계산 (구면좌표 -> 직교좌표 변환)
+function calculateCameraPosition() {
+  // p5.js WEBGL 좌표계 (Y가 위쪽) 기준
+  // angleH: Y축 기준 회전각 (0일 때 +Z축 방향 가정)
+  // angleV: XZ 평면 기준 회전각 (0일 때 XZ 평면, PI/2일 때 +Y축)
+  camX = centerX + distance * cos(angleV) * sin(angleH);
+  camY = centerY + distance * sin(angleV); // Y가 위쪽이므로 sin(angleV) 사용
+  camZ = centerZ + distance * cos(angleV) * cos(angleH);
 }
 
 function draw() {
-  background(0, 0, 10); // Dark gray background
-  
-  // Draw traces first (behind everything)
-  drawTraces();
-  
-  // Update and draw photons
-  updatePhotons();
-  
-  // Draw mirrors on top
-  drawMirrors();
-}
+  background(5, 5, 10);
 
-function createPhoton() {
-  // Create from random edge
-  let edge = floor(random(4));
-  let pos = createVector();
-  let vel = createVector();
-  let hue = random(360);
-  
-  switch (edge) {
-    case 0: // Top
-      pos.set(random(width), 0);
-      vel.set(random(-1, 1), random(1, 3));
-      break;
-    case 1: // Right
-      pos.set(width, random(height));
-      vel.set(random(-3, -1), random(-1, 1));
-      break;
-    case 2: // Bottom
-      pos.set(random(width), height);
-      vel.set(random(-1, 1), random(-3, -1));
-      break;
-    case 3: // Left
-      pos.set(0, random(height));
-      vel.set(random(1, 3), random(-1, 1));
-      break;
+  // --- 카메라 설정 ---
+  camera(camX, camY, camZ,       // 계산된 카메라 위치
+         centerX, centerY, centerZ, // 항상 원점을 바라봄
+         0, 1, 0);              // 월드 좌표계의 위쪽 방향 (Y축)
+
+  // --- 로렌츠 방정식 계산 ---
+  let dx = (sigma * (y - x)) * dt;
+  let dy = (x * (rho - z) - y) * dt;
+  let dz = (x * y - beta * z) * dt;
+  x = x + dx;
+  y = y + dy;
+  z = z + dz;
+  points.unshift(createVector(x, y, z));
+  if (points.length > maxPoints) {
+    points.pop();
   }
-  
-  photons.push({
-    pos: pos,
-    vel: vel,
-    hue: hue,
-    brightness: 100,
-    size: random(2, 4)
-  });
-}
 
-function updatePhotons() {
-  for (let i = photons.length - 1; i >= 0; i--) {
-    let p = photons[i];
-    
-    // Store previous position for trail
-    let prevPos = p.pos.copy();
-    
-    // Update position
-    p.pos.add(p.vel);
-    
-    // Add to trace (with fading)
-    traces.push({
-      x: p.pos.x,
-      y: p.pos.y,
-      hue: p.hue,
-      alpha: 100,
-      size: p.size * 0.7
-    });
-    
-    // Check mirror collisions
-    checkMirrorCollision(p, prevPos);
-    
-    // Remove if out of bounds
-    if (p.pos.x < 0 || p.pos.x > width || p.pos.y < 0 || p.pos.y > height) {
-      photons.splice(i, 1);
-      createPhoton();
-      continue;
-    }
-    
-    // Draw photon
-    noStroke();
-    fill(p.hue, 80, p.brightness);
-    circle(p.pos.x, p.pos.y, p.size);
-    
-    // Make it pulse slightly
-    p.size = 2 + sin(frameCount * 0.1) * 1.5;
+  // --- 3D 렌더링 ---
+  // scale() 함수 사용 안 함
+
+  // 끌개 궤적 그리기
+  noFill();
+  strokeWeight(1.5);
+  beginShape();
+  for (let i = 0; i < points.length; i++) {
+    let p = points[i];
+    let hue = (hueStart + i * 0.1) % 360;
+    let saturation = 90;
+    let brightness = map(i, 0, points.length, 100, 60);
+    let alpha = map(i, 0, points.length, 100, 10);
+    stroke(hue, saturation, brightness, alpha);
+    vertex(p.x, p.y, p.z);
   }
+  endShape();
+
+  hueStart = (hueStart + 0.5) % 360;
 }
 
-function checkMirrorCollision(photon, prevPos) {
-  for (let mirror of mirrors) {
-    let intersection = lineIntersection(
-      prevPos.x, prevPos.y, photon.pos.x, photon.pos.y,
-      mirror.x1, mirror.y1, mirror.x2, mirror.y2
-    );
-    
-    if (intersection) {
-      // Calculate reflection
-      let mirrorAngle = atan2(mirror.y2 - mirror.y1, mirror.x2 - mirror.x1);
-      let incidentAngle = atan2(photon.vel.y, photon.vel.x);
-      let reflectedAngle = 2 * mirrorAngle - incidentAngle + PI;
-      
-      // Update velocity
-      photon.vel.set(cos(reflectedAngle) * photon.vel.mag(), 
-                    sin(reflectedAngle) * photon.vel.mag());
-      
-      // Adjust position to avoid sticking
-      photon.pos.set(intersection.x + photon.vel.x * 0.1, 
-                    intersection.y + photon.vel.y * 0.1);
-      
-      // Change hue slightly on bounce
-      photon.hue = (photon.hue + 20) % 360;
-      
-      // Add bright spot at collision point
-      traces.push({
-        x: intersection.x,
-        y: intersection.y,
-        hue: photon.hue,
-        alpha: 150,
-        size: 8
-      });
-      
-      break;
-    }
-  }
-}
+// --- 마우스 인터랙션 함수 ---
 
-function drawTraces() {
-  for (let i = traces.length - 1; i >= 0; i--) {
-    let t = traces[i];
-    
-    noStroke();
-    fill(t.hue, 60, 100, t.alpha);
-    circle(t.x, t.y, t.size);
-    
-    t.alpha -= 1.5;
-    if (t.alpha <= 0) {
-      traces.splice(i, 1);
-    }
-  }
-}
-
-function drawMirrors() {
-  stroke(200, 80);
-  strokeWeight(2);
-  
-  for (let mirror of mirrors) {
-    line(mirror.x1, mirror.y1, mirror.x2, mirror.y2);
-    
-    // Draw handles
-    if (isDragging && (mirror === draggedMirror)) {
-      fill(200, 100, 100);
-      circle(mirror.x1, mirror.y1, 8);
-      circle(mirror.x2, mirror.y2, 8);
-    }
-  }
-}
-
-// Line intersection helper function
-function lineIntersection(x1, y1, x2, y2, x3, y3, x4, y4) {
-  let denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
-  if (denom === 0) return null;
-  
-  let ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
-  let ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
-  
-  if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) {
-    return {
-      x: x1 + ua * (x2 - x1),
-      y: y1 + ua * (y2 - y1)
-    };
-  }
-  return null;
-}
-
-// Mouse interaction functions (same as before)
 function mousePressed() {
-  let minDist = 20;
-  let closestMirror = null;
-  let closestPoint = null;
-  let closestDistance = minDist;
-
-  for (let mirror of mirrors) {
-    let d1 = dist(mouseX, mouseY, mirror.x1, mirror.y1);
-    if (d1 < closestDistance) {
-      closestDistance = d1;
-      closestMirror = mirror;
-      closestPoint = 'start';
-    }
-    
-    let d2 = dist(mouseX, mouseY, mirror.x2, mirror.y2);
-    if (d2 < closestDistance) {
-      closestDistance = d2;
-      closestMirror = mirror;
-      closestPoint = 'end';
-    }
-    
-    let d3 = distToLine(mouseX, mouseY, mirror.x1, mirror.y1, mirror.x2, mirror.y2);
-    if (d3 < closestDistance) {
-      closestDistance = d3;
-      closestMirror = mirror;
-      closestPoint = 'middle';
-      dragOffset.x = mouseX - (mirror.x1 + mirror.x2) / 2;
-      dragOffset.y = mouseY - (mirror.y1 + mirror.y2) / 2;
-    }
-  }
-  
-  if (closestMirror) {
+  if (mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
     isDragging = true;
-    draggedMirror = closestMirror;
-    draggedMirror.dragPoint = closestPoint;
-    
-    if (closestPoint === 'start') {
-      dragOffset.x = mouseX - draggedMirror.x1;
-      dragOffset.y = mouseY - draggedMirror.y1;
-    } else if (closestPoint === 'end') {
-      dragOffset.x = mouseX - draggedMirror.x2;
-      dragOffset.y = mouseY - draggedMirror.y2;
-    }
+    prevMouseX = mouseX;
+    prevMouseY = mouseY;
+    cursor(HAND);
   }
 }
 
 function mouseDragged() {
-  if (isDragging && draggedMirror) {
-    if (draggedMirror.dragPoint === 'start') {
-      draggedMirror.x1 = mouseX - dragOffset.x;
-      draggedMirror.y1 = mouseY - dragOffset.y;
-    } else if (draggedMirror.dragPoint === 'end') {
-      draggedMirror.x2 = mouseX - dragOffset.x;
-      draggedMirror.y2 = mouseY - dragOffset.y;
-    } else if (draggedMirror.dragPoint === 'middle') {
-      let dx = mouseX - dragOffset.x - (draggedMirror.x1 + draggedMirror.x2) / 2;
-      let dy = mouseY - dragOffset.y - (draggedMirror.y1 + draggedMirror.y2) / 2;
-      draggedMirror.x1 += dx;
-      draggedMirror.y1 += dy;
-      draggedMirror.x2 += dx;
-      draggedMirror.y2 += dy;
-    }
+  if (isDragging) {
+    let dx = mouseX - prevMouseX;
+    let dy = mouseY - prevMouseY;
+
+    // --- 수평 이동 (dx) => Orbit (angleH 변경) ---
+    angleH += dx * orbitSensitivity;
+
+    // --- 수직 이동 (dy) => Tilt (angleV 변경) ---
+    // 마우스를 아래로 내릴 때(dy 양수) 카메라가 아래를 보도록 angleV 감소
+    angleV -= dy * tiltSensitivity;
+
+    // 수직 각도 제한 (카메라가 완전히 뒤집히는 것 방지)
+    // -PI/2 + 조금 ~ PI/2 - 조금
+    angleV = constrain(angleV, -HALF_PI + 0.01, HALF_PI - 0.01);
+
+    // 변경된 각도로 카메라 위치 재계산
+    calculateCameraPosition();
+
+    // 이전 마우스 위치 업데이트
+    prevMouseX = mouseX;
+    prevMouseY = mouseY;
   }
 }
 
 function mouseReleased() {
-  isDragging = false;
-  draggedMirror = null;
+  if (isDragging) {
+    isDragging = false;
+    cursor(ARROW);
+  }
 }
 
-function distToLine(px, py, x1, y1, x2, y2) {
-  let lineLength = dist(x1, y1, x2, y2);
-  if (lineLength === 0) return dist(px, py, x1, y1);
-  
-  let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / (lineLength * lineLength);
-  t = constrain(t, 0, 1);
-  
-  let projX = x1 + t * (x2 - x1);
-  let projY = y1 + t * (y2 - y1);
-  
-  return dist(px, py, projX, projY);
+// 마우스 휠 스크롤로 확대/축소 (Zoom) - 카메라 거리 조절
+function mouseWheel(event) {
+  // event.delta 양수: 휠 아래로 (축소 -> 거리 증가)
+  // event.delta 음수: 휠 위로 (확대 -> 거리 감소)
+  distance += event.delta * zoomSensitivity;
+
+  // 거리 제한
+  distance = constrain(distance, 50, 2000); // 최소/최대 거리 설정
+
+  // 변경된 거리로 카메라 위치 재계산
+  calculateCameraPosition();
+
+  return false; // 페이지 스크롤 방지
+}
+
+// 브라우저 창 크기가 변경될 때 캔버스 크기 조절
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight * 0.9);
+  // 창 크기 변경 시 카메라 위치 재계산 (화면 비율 달라질 때 필요할 수 있음)
+  calculateCameraPosition();
 }

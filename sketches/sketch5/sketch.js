@@ -323,7 +323,7 @@ function mouseReleased() {
 function mouseDragged() {
     // 마우스 드래그로 회전 조작
     rotationY += (mouseX - pmouseX) * 0.01;
-    rotationX += (mouseY - pmouseY) * 0.01;
+    rotationX -= (mouseY - pmouseY) * 0.01;
 }
 
 function keyPressed() {
